@@ -1,0 +1,81 @@
+"""Analytics store: leaderboard runs, equity snapshots, event bus."""
+import json
+import sqlite3
+from datetime import datetime, timezone
+from pathlib import Path
+
+DB = Path(__file__).parent.parent / "data" / "analytics.sqlite"
+
+
+def con() -> sqlite3.Connection:
+    DB.parent.mkdir(parents=True, exist_ok=True)
+    c = sqlite3.connect(DB, timeout=10)
+    c.row_factory = sqlite3.Row
+    c.execute("PRAGMA journal_mode=WAL")
+    c.executescript("""
+    CREATE TABLE IF NOT EXISTS leaderboard_runs(
+      id INTEGER PRIMARY KEY, computed_at TEXT,
+      accounts_checked INT, accounts_funded INT);
+    CREATE TABLE IF NOT EXISTS leaderboard_rows(
+      run_id INT, address TEXT, equity REAL, pnl_total REAL, pnl_window REAL,
+      day_winrate REAL, max_dd REAL, maker_share REAL, avg_fill REAL,
+      farmer_flag INT, identity_residual REAL);
+    CREATE TABLE IF NOT EXISTS equity_snapshots(
+      address TEXT, ts TEXT, equity REAL);
+    CREATE TABLE IF NOT EXISTS events(
+      id INTEGER PRIMARY KEY, ts TEXT, kind TEXT, subject TEXT,
+      payload TEXT, published INT DEFAULT 0);
+    """)
+    return c
+
+
+def add_event(kind: str, subject: str, payload: dict, c: sqlite3.Connection | None = None):
+    own = c is None
+    c = c or con()
+    ts = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    # dedup: same kind+subject within 2h -> skip
+    dup = c.execute(
+        "SELECT 1 FROM events WHERE kind=? AND subject=? AND ts > datetime('now','-2 hours')",
+        (kind, subject)).fetchone()
+    if not dup:
+        c.execute("INSERT INTO events(ts,kind,subject,payload) VALUES(?,?,?,?)",
+                  (ts, kind, subject, json.dumps(payload)))
+        if own:
+            c.commit()
+    if own:
+        c.close()
+
+
+def latest_events(limit: int = 20, kind: str | None = None) -> list[dict]:
+    with con() as c:
+        if kind:
+            rows = c.execute("SELECT * FROM events WHERE kind=? ORDER BY id DESC LIMIT ?",
+                             (kind, limit)).fetchall()
+        else:
+            rows = c.execute("SELECT * FROM events ORDER BY id DESC LIMIT ?",
+                             (limit,)).fetchall()
+    out = []
+    for r in rows:
+        d = dict(r)
+        d["payload"] = json.loads(d["payload"])
+        out.append(d)
+    return out
+
+
+def leaderboard(limit: int = 20, metric: str = "pnl_window") -> dict:
+    with con() as c:
+        run = c.execute("SELECT * FROM leaderboard_runs ORDER BY id DESC LIMIT 1").fetchone()
+        if not run:
+            return {"error": "no leaderboard run yet — run leaderboard.py first"}
+        rows = c.execute("SELECT * FROM leaderboard_rows WHERE run_id=?",
+                         (run["id"],)).fetchall()
+    key = {"pnl_window": "pnl_window", "pnl_total": "pnl_total",
+           "equity": "equity", "day_winrate": "day_winrate"}[metric]
+    rows = sorted(rows, key=lambda r: -(r[key] or 0))[:limit]
+    return {
+        "run": dict(run),
+        "metric": metric,
+        "top": [{**dict(r), "farmer_flag": bool(r["farmer_flag"])} for r in rows],
+        "summary": (f"top by {metric}: " + ", ".join(
+            f"{r['address'][:10]}… ${r[key]:,.0f}" for r in rows[:5])),
+    }

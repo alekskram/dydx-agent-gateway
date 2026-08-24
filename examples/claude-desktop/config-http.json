@@ -1,0 +1,9 @@
+{
+  "_comment": "Claude Desktop — подключение к hosted-эндпоинту (streamable HTTP), когда шлюз уже запущен где-то как сервис. Никакой установки не нужно.",
+  "mcpServers": {
+    "dydx": {
+      "type": "http",
+      "url": "http://127.0.0.1:8901/mcp"
+    }
+  }
+}

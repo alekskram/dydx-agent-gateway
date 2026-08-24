@@ -1,0 +1,23 @@
+[project]
+name = "dydx-agent-gateway"
+version = "0.1.0"
+description = "MCP gateway for AI agents to dYdX v4: market data, funding heatmap, TA, verified trader analytics (deposit-adjusted PnL), leaderboards, anomaly & liquidation-cascade detectors, optional EIP-712 trading with user-held keys."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+keywords = ["dydx", "mcp", "ai-agents", "perpetuals", "analytics"]
+dependencies = [
+    "fastmcp>=3.0",
+    "pycryptodome>=3.20",
+    "ecdsa>=0.18",
+]
+
+[project.scripts]
+dydx-agent-gateway = "dydx_mcp.server:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["dydx_mcp"]
