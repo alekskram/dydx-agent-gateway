@@ -28,8 +28,10 @@ def run():
     for addr in seen:
         try:
             acct = api.account(addr)
-            eq = max((float(s.get("equity", 0) or 0)
-                      for s in acct.get("subaccounts", [])), default=0.0)
+            subs = [(float(s.get("equity", 0) or 0),
+                     int(s.get("subaccountNumber", 0) or 0))
+                    for s in acct.get("subaccounts", [])]
+            eq, sub_n = max(subs) if subs else (0.0, 0)
         except Exception:  # noqa: BLE001
             continue
         # equity_jump event vs previous snapshot
@@ -43,8 +45,9 @@ def run():
         if eq < MIN_EQUITY:
             continue
         funded += 1
-        stats = pnl_stats(addr)
-        fills = api.fills(addr, 0, 100)
+        # PnL/fills from the SAME subaccount that holds the equity
+        stats = pnl_stats(addr, subaccount=sub_n)
+        fills = api.fills(addr, sub_n, 100)
         maker = sum(1 for f in fills if f.get("liquidity") == "MAKER")
         vol = sum(float(f.get("size", 0) or 0) * float(f.get("price", 0) or 0) for f in fills)
         avg_fill = vol / len(fills) if fills else 0
