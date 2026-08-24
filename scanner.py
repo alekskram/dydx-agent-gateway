@@ -110,35 +110,46 @@ def run(n_blocks: int | None):
         cur = tip - 5 if n_blocks is None else tip - n_blocks
     target = tip if n_blocks is None else min(tip, cur + n_blocks)
     n_addr, n_blocks_done = 0, 0
-    while cur < target:
-        cur += 1
-        try:
-            addrs = block_addresses(cur)
-        except Exception as e:  # noqa: BLE001 - keep scanning
-            print(f"[warn] block {cur}: {e}")
-            continue
-        now = datetime.now(timezone.utc).isoformat(timespec="seconds")
-        for a in addrs:
-            if not valid(a):
+    while True:
+        while cur < target:
+            cur += 1
+            try:
+                addrs = block_addresses(cur)
+            except Exception as e:  # noqa: BLE001 - keep scanning
+                print(f"[warn] block {cur}: {e}")
                 continue
-            cur2 = con.execute(
-                "INSERT OR IGNORE INTO addr_blocks(address, height) VALUES(?,?)",
-                (a, cur))
-            if cur2.rowcount == 0:
-                continue  # already counted for this block
-            con.execute("""INSERT INTO addresses(address, first_seen, last_seen, hits, last_height)
-                VALUES(?,?,?,1,?)
-                ON CONFLICT(address) DO UPDATE SET
-                  last_seen=excluded.last_seen, hits=hits+1,
-                  last_height=excluded.last_height""", (a, now, now, cur))
-        n_addr += len(addrs)
-        n_blocks_done += 1
-        if n_blocks_done % 20 == 0:
-            con.execute("INSERT OR REPLACE INTO meta VALUES('cursor',?)", (str(cur),))
-            con.commit()
-            print(f"  scanned {n_blocks_done} blocks -> height {cur}, "
-                  f"{n_addr} addr-events")
-        time.sleep(0.08)  # ~12 blocks/s ceiling, polite to public RPC
+            now = datetime.now(timezone.utc).isoformat(timespec="seconds")
+            for a in addrs:
+                if not valid(a):
+                    continue
+                cur2 = con.execute(
+                    "INSERT OR IGNORE INTO addr_blocks(address, height) VALUES(?,?)",
+                    (a, cur))
+                if cur2.rowcount == 0:
+                    continue  # already counted for this block
+                con.execute("""INSERT INTO addresses(address, first_seen, last_seen, hits, last_height)
+                    VALUES(?,?,?,1,?)
+                    ON CONFLICT(address) DO UPDATE SET
+                      last_seen=excluded.last_seen, hits=hits+1,
+                      last_height=excluded.last_height""", (a, now, now, cur))
+            n_addr += len(addrs)
+            n_blocks_done += 1
+            if n_blocks_done % 20 == 0:
+                con.execute("INSERT OR REPLACE INTO meta VALUES('cursor',?)", (str(cur),))
+                con.commit()
+                print(f"  scanned {n_blocks_done} blocks -> height {cur}, "
+                      f"{n_addr} addr-events")
+            time.sleep(0.08)  # ~12 blocks/s ceiling, polite to public RPC
+        if n_blocks is not None:
+            break
+        # continuous mode: follow the tip instead of exiting
+        con.execute("INSERT OR REPLACE INTO meta VALUES('cursor',?)", (str(cur),))
+        con.commit()
+        time.sleep(1.0)
+        try:
+            target = latest_height()
+        except Exception as e:  # noqa: BLE001 - retry next tick
+            print(f"[warn] height refresh: {e}")
     con.execute("INSERT OR REPLACE INTO meta VALUES('cursor',?)", (str(cur),))
     con.commit()
     total = con.execute("SELECT COUNT(*) FROM addresses").fetchone()[0]

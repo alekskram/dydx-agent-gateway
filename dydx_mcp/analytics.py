@@ -46,6 +46,16 @@ def add_event(kind: str, subject: str, payload: dict, c: sqlite3.Connection | No
         c.close()
 
 
+def prune_events(keep: int = 5000) -> int:
+    """Retention: keep only the newest `keep` events (queue hygiene)."""
+    with con() as c:
+        n = c.execute("SELECT COUNT(*) FROM events").fetchone()[0]
+        if n > keep:
+            c.execute("DELETE FROM events WHERE id <= (SELECT MAX(id) FROM events) - ?",
+                      (keep,))
+        return n - keep if n > keep else 0
+
+
 def latest_events(limit: int = 20, kind: str | None = None) -> list[dict]:
     with con() as c:
         if kind:

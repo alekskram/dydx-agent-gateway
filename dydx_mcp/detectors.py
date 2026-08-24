@@ -136,5 +136,7 @@ def run_all() -> dict:
     o = oi_spike_without_price()
     l = liquidation_signature()
     e = equity_jumps()
+    from .analytics import prune_events
+    prune_events()
     return {"funding_extremes": len(f), "oi_spikes": len(o),
             "liq_cascades": len(l), "equity_jumps": e}

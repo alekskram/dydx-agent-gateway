@@ -1,11 +1,10 @@
 """dYdX Agent Gateway — MCP server.
 
 Lets any AI agent read dYdX v4 market data & trader analytics, and (when the
-user provides their own API credentials) place and manage orders.
-
-Public data tools work out of the box with no keys. Trading tools require
-the official dYdX v4 Python client (v4-client-py) and the user's own
-wallet/API credentials — keys never leave the host running this server.
+user provides their own wallet key via DYDX_ETH_KEY) place and manage orders
+through our built-in zero-heavy-dep EIP-712 signer (dydx_mcp/signer.py).
+Keys never leave the host running this server; live submission requires
+explicit human consent (see demos/demo3_order_consent.py).
 """
 from . import api
 
