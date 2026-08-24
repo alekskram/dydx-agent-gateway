@@ -387,9 +387,9 @@ def main():
     a = ap.parse_args()
     mcp = build_server()
     if a.http:
-        mcp.run(transport="http", host=a.host, port=a.port)
+        mcp.run(transport="http", host=a.host, port=a.port, show_banner=False)
     else:
-        mcp.run()  # stdio
+        mcp.run(show_banner=False)  # stdio: no banner noise in user logs
 
 
 if __name__ == "__main__":

@@ -102,6 +102,9 @@ Claude Desktop (`claude_desktop_config.json`):
 | dydx-mcp.service | MCP endpoint (HTTP) | непрерывно |
 | dydx-detectors.timer | детекторы + алерты (TG/вебхуки) | каждые 5 мин |
 | dydx-leaderboard.timer | пересборка лидерборда | каждые 6 ч |
+| dydx-backup.timer | WAL-безопасный бэкап (backup.sh, 30 дней) | ежедневно 23:40 |
+
+Публичный URL: инструкция именованного туннеля — `deploy-public.md`.
 
 Алерты: `alerts.env` (DYDX_TG_BOT_TOKEN, DYDX_TG_CHAT_ID, DYDX_WEBHOOKS).
 

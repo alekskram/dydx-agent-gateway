@@ -51,6 +51,9 @@ def run():
         maker = sum(1 for f in fills if f.get("liquidity") == "MAKER")
         vol = sum(float(f.get("size", 0) or 0) * float(f.get("price", 0) or 0) for f in fills)
         avg_fill = vol / len(fills) if fills else 0
+        # Heuristic v0 (UNCALIBRATED: 0 flags in run #6 cohort — dYdX trading
+        # rewards wound down, or thresholds too strict; recalibrate against a
+        # known rewards-farmer address when one is identified)
         farmer = int(maker >= 90 and avg_fill <= 300 and len(fills) >= 50)
         rows.append((addr, round(eq, 2), stats.get("totalPnl_now"),
                      stats.get("totalPnl_delta_window"), stats.get("day_winrate_pct"),

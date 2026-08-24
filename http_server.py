@@ -12,4 +12,5 @@ if __name__ == "__main__":
     mcp = build_server()
     mcp.run(transport="http",
             host=os.environ.get("DYDX_MCP_HOST", "127.0.0.1"),
-            port=int(os.environ.get("DYDX_MCP_PORT", "8901")))
+            port=int(os.environ.get("DYDX_MCP_PORT", "8901")),
+            show_banner=False)
