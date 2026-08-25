@@ -45,7 +45,7 @@ def market_detail(ticker: str) -> dict:
     (the raw API priceChange field is unreliable), OI, funding."""
     m = api.markets().get(ticker)
     if not m:
-        return {"error": f"unknown ticker {ticker}"}
+        raise ValueError(f"unknown ticker {ticker}")  # -> isError per MCP spec
     cnd = api.candles(ticker, "1HOUR", 25)
     change24h = None
     if len(cnd) >= 25:
@@ -283,13 +283,14 @@ def market_ta(ticker: str, resolution: str = "1HOUR") -> dict:
     trend = "up" if e20 > e50 else "down"
     zone = ("overbought" if rsi and rsi > 70 else
             "oversold" if rsi and rsi < 30 else "neutral")
+    bb_s = f"{pct_b:.2f}" if pct_b is not None else "n/a"
     return {
         "ticker": ticker, "resolution": resolution, "price": _fmt(price),
         "trend_ema20_50": trend, "rsi14": _fmt(rsi, 1), "rsi_zone": zone,
         "atr14": _fmt(atr, 4), "atr_pct_of_price": _fmt(atr / price * 100, 2),
         "bollinger_pctB": _fmt(pct_b, 2),
         "summary": (f"{ticker}: {trend} trend, RSI {rsi:.0f} ({zone}), "
-                    f"ATR {atr / price * 100:.2f}% of price, BB%B {pct_b:.2f}"),
+                    f"ATR {atr / price * 100:.2f}% of price, BB%B {bb_s}"),
     }
 
 
@@ -301,7 +302,7 @@ def suggest_stops(ticker: str, side: str, entry: float | None = None,
     m = api.markets().get(ticker, {})
     entry = float(entry or m.get("oraclePrice") or 0)
     if not entry:
-        return {"error": f"no price for {ticker}"}
+        raise ValueError(f"no price available for {ticker}")
     ta = market_ta(ticker, resolution)
     atr = ta.get("atr14")
     if not atr:

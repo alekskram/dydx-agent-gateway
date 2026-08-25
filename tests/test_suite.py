@@ -1,7 +1,11 @@
-"""Offline test suite (no network): pnl math, quantize, bech32, alerts logic.
+"""Offline legacy suite (kept runnable without pytest). Isolated from
+production data via DYDX_GATEWAY_DATA -> temp dir (set before imports)."""
+import os as _os
+import tempfile as _tf
 
-Run:  .venv/bin/python tests/test_suite.py   (exit 0 = all pass)
-"""
+_TMP = _tf.mkdtemp(prefix="dydx-legacy-")
+_os.environ["DYDX_GATEWAY_DATA"] = _TMP
+
 import sys
 from pathlib import Path
 
@@ -9,6 +13,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from dydx_mcp.pnl_engine import compute  # noqa: E402
 from dydx_mcp.signer import quantize, sign_api_credentials, key_from_hex  # noqa: E402
+from dydx_mcp.signer import SigningKey as _SK  # noqa: E402
 from dydx_mcp.signer import SigningKey, SECP256k1  # noqa: E402
 
 FAILURES = []
@@ -55,6 +60,8 @@ ok("quantize округление к шагу", q2["size_quantums"] == 50_000_00
 sk = SigningKey.generate(curve=SECP256k1)
 api_c = sign_api_credentials(sk, timestamp_ms=1700000000000)
 ok("подписанный timestamp == возвращённому", api_c["timestamp"] == 1700000000000)
+ok("key_from_hex: приватный ключ 0x01 соответствует адресу 7E5F...5Bdf",
+   "0x7e5f4552091a69125d5dfcb7b8c2659029395bdf" == __import__("dydx_mcp.signer", fromlist=["eth_address"]).eth_address(key_from_hex("0x01").get_verifying_key()))
 
 # ---- scanner.valid: контрольная сумма bech32 ----
 from scanner import valid  # noqa: E402

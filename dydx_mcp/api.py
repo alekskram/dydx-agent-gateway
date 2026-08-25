@@ -76,21 +76,34 @@ def account(address: str) -> dict:
 
 
 def historical_pnl(address: str, subaccount: int = 0, limit: int = 1000) -> list:
-    """Newest-first PnL series, paginated up to `limit` (cap 5000, ~7 months)."""
+    """Newest-first PnL series, paginated up to `limit` (cap 5000, ~7 months).
+    The createdBeforeOrAt filter is INCLUSIVE, so each next page repeats the
+    boundary row — those repeats are dropped (strict < cursor)."""
     want = min(limit, 5000)
     out: list = []
     cursor = None
-    while len(out) < want:
-        p = {"address": address, "subaccountNumber": subaccount,
-             "limit": min(1000, want - len(out))}
+    pages = 0
+    while len(out) < want and pages < 30:  # hard loop guard
+        fetch = min(1000, want - len(out))
+        p = {"address": address, "subaccountNumber": subaccount, "limit": fetch}
         if cursor:
             p["createdBeforeOrAt"] = cursor
-        page = get("historical-pnl", p).get("historicalPnl", [])
-        if not page:
+        raw = get("historical-pnl", p).get("historicalPnl", [])
+        pages += 1
+        if not raw:
             break
-        out.extend(page)
-        cursor = page[-1].get("createdAt")
-        if len(page) < p["limit"]:
+        page = [r for r in raw if cursor is None
+                or r.get("createdAt", "") < cursor]
+        if page:
+            out.extend(page)
+            cursor = page[-1].get("createdAt")  # strictly decreases
+        else:
+            # full raw page entirely at the boundary: jump to its OLDEST ts
+            jump = min(r.get("createdAt", "") for r in raw)
+            if cursor is not None and jump >= cursor:
+                break  # mis-ordered data: refuse to loop
+            cursor = jump
+        if len(raw) < fetch:  # server ran out of history
             break
     return out[:want]
 

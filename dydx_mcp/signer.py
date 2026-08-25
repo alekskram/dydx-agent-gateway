@@ -63,8 +63,8 @@ def _digest(typehash: bytes, fields: list[bytes]) -> bytes:
 # ------------------------------------------------------------------- keys
 
 def key_from_hex(hexkey: str) -> SigningKey:
-    return SigningKey.from_string(bytes.fromhex(hexkey.strip()
-                                                .removeprefix("0x")), curve=CURVE)
+    raw = bytes.fromhex(hexkey.strip().removeprefix("0x"))
+    return SigningKey.from_string(raw.rjust(32, b"\0"), curve=CURVE)
 
 
 def eth_address(vk: VerifyingKey) -> str:

@@ -106,28 +106,30 @@ def equity_jumps(n_candidates: int = 25, min_equity: float = 500.0,
     con = analytics.con()
     ts = datetime.now(timezone.utc).isoformat(timespec="seconds")
     n = 0
-    for c in cands:
-        addr = c["address"]
-        try:
-            acct = api.account(addr)
-        except Exception:  # noqa: BLE001
-            continue
-        eq = max((float(s.get("equity", 0) or 0)
-                  for s in acct.get("subaccounts", [])), default=0.0)
-        prev = con.execute("SELECT equity FROM equity_snapshots "
-                           "WHERE address=? ORDER BY ts DESC LIMIT 1",
-                           (addr,)).fetchone()
-        con.execute("INSERT INTO equity_snapshots VALUES(?,?,?)", (addr, ts, eq))
-        if prev and prev["equity"] >= min_equity:
-            pct = (eq / prev["equity"] - 1) * 100
-            if abs(pct) >= threshold_pct:
-                analytics.add_event("equity_jump", addr,
-                                    {"from": round(prev["equity"], 2),
-                                     "to": round(eq, 2),
-                                     "pct": round(pct, 1)}, con)
-                n += 1
-    con.commit()
-    con.close()
+    try:
+        for c in cands:
+            addr = c["address"]
+            try:
+                acct = api.account(addr)
+            except Exception:  # noqa: BLE001 - one bad probe must not kill the batch
+                continue
+            eq = max((float(s.get("equity", 0) or 0)
+                      for s in acct.get("subaccounts", [])), default=0.0)
+            prev = con.execute("SELECT equity FROM equity_snapshots "
+                               "WHERE address=? ORDER BY ts DESC LIMIT 1",
+                               (addr,)).fetchone()
+            con.execute("INSERT INTO equity_snapshots VALUES(?,?,?)", (addr, ts, eq))
+            if prev and prev["equity"] >= min_equity:
+                pct = (eq / prev["equity"] - 1) * 100
+                if abs(pct) >= threshold_pct:
+                    analytics.add_event("equity_jump", addr,
+                                        {"from": round(prev["equity"], 2),
+                                         "to": round(eq, 2),
+                                         "pct": round(pct, 1)}, con)
+                    n += 1
+        con.commit()
+    finally:
+        con.close()  # never leak the connection on a mid-batch failure
     return n
 
 

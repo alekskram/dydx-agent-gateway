@@ -54,10 +54,13 @@ def usage_stats() -> dict:
 def add_event(kind: str, subject: str, payload: dict, c: sqlite3.Connection | None = None):
     own = c is None
     c = c or con()
-    ts = datetime.now(timezone.utc).isoformat(timespec="seconds")
-    # dedup: same kind+subject within 2h -> skip
+    # sqlite-compatible UTC format (sortable, parsable by julianday)
+    ts = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
+    # dedup: same kind+subject within 2h -> skip. julianday() also parses
+    # legacy rows written with ISO-'T'+tz format before the fix.
     dup = c.execute(
-        "SELECT 1 FROM events WHERE kind=? AND subject=? AND ts > datetime('now','-2 hours')",
+        "SELECT 1 FROM events WHERE kind=? AND subject=? "
+        "AND julianday(ts) > julianday('now','-2 hours')",
         (kind, subject)).fetchone()
     if not dup:
         c.execute("INSERT INTO events(ts,kind,subject,payload) VALUES(?,?,?,?)",
@@ -69,11 +72,12 @@ def add_event(kind: str, subject: str, payload: dict, c: sqlite3.Connection | No
 
 
 def prune_events(keep: int = 5000) -> int:
-    """Retention: keep only the newest `keep` events (queue hygiene)."""
+    """Retention: keep only the newest `keep` rows regardless of id gaps."""
     with con() as c:
         n = c.execute("SELECT COUNT(*) FROM events").fetchone()[0]
         if n > keep:
-            c.execute("DELETE FROM events WHERE id <= (SELECT MAX(id) FROM events) - ?",
+            c.execute("DELETE FROM events WHERE id NOT IN "
+                      "(SELECT id FROM events ORDER BY id DESC LIMIT ?)",
                       (keep,))
         return n - keep if n > keep else 0
 
