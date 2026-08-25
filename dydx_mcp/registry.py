@@ -4,10 +4,11 @@ Read-only (WAL mode set by the scanner), so the MCP server and the scanner
 service share the file safely.
 """
 import sqlite3
-import time
-from pathlib import Path
+from datetime import datetime, timezone
 
-DB = Path(__file__).parent.parent / "data" / "registry.sqlite"
+from .paths import data_dir
+
+DB = data_dir() / "registry.sqlite"
 
 
 def _con() -> sqlite3.Connection:

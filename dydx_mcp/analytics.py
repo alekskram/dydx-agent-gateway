@@ -2,9 +2,10 @@
 import json
 import sqlite3
 from datetime import datetime, timezone
-from pathlib import Path
 
-DB = Path(__file__).parent.parent / "data" / "analytics.sqlite"
+from .paths import data_dir
+
+DB = data_dir() / "analytics.sqlite"
 
 
 def con() -> sqlite3.Connection:
