@@ -109,12 +109,15 @@ def trader_profile(address: str, subaccount: int = 0) -> dict:
     }
 
 
-def trader_pnl_stats(address: str, subaccount: int = 0) -> dict:
+def trader_pnl_stats(address: str, subaccount: int = 0,
+                     limit: int = 1000) -> dict:
     """Deep PnL statistics from the equity curve: daily PnL, day-winrate,
     max drawdown (deposit-adjusted), Sharpe-like daily ratio, and the
-    data-accuracy reconciliation residual (phantom-PnL detector)."""
+    data-accuracy reconciliation residual (phantom-PnL detector).
+    limit: history depth in points — 1000 ≈ 42 days (default, fast),
+    5000 ≈ 7 months (slower, multi-page fetch)."""
     from .pnl_engine import pnl_stats
-    return pnl_stats(address, subaccount)
+    return pnl_stats(address, subaccount, max(100, min(limit, 5000)))
 
 
 def registry_stats() -> dict:
@@ -153,6 +156,38 @@ def latest_events(limit: int = 20, kind: str | None = None) -> list[dict]:
     oi_spike_no_price, equity_jump. Subscribe via webhooks/Telegram (alerts)."""
     from . import analytics
     return analytics.latest_events(limit, kind)
+
+
+def market_digest() -> dict:
+    """One-call market briefing: latest detector events + funding extremes
+    (liquid markets only) + verified leaderboard top. The daily briefing
+    an agent (or human) needs before anything else."""
+    heat = funding_heatmap(5, min_oi_usd=100_000.0)
+    lb = leaderboard(3, "pnl_window")
+    from . import analytics
+    ev = analytics.latest_events(5)
+    events = [{"kind": e["kind"], "subject": e["subject"],
+               **e["payload"]} for e in ev]
+    return {
+        "events": events,
+        "funding": heat["top"],
+        "leaderboard_top": [{k: r[k] for k in
+                             ("address", "pnl_window", "equity", "day_winrate")}
+                            for r in lb.get("top", [])],
+        "summary": (f"events: {len(events)} | extreme funding: "
+                    + (heat["top"][0]["ticker"] + " "
+                       + str(heat["top"][0]["funding_pct_annualized"]) + "% ann"
+                       if heat["top"] else "none")
+                    + f" | leaderboard #1: "
+                    + (f"{lb['top'][0]['address'][:10]}… +${lb['top'][0]['pnl_window']:,.0f}"
+                       if lb.get("top") else "n/a")),
+    }
+
+
+def usage_stats() -> dict:
+    """Tool-call counters since deployment (traction/uptime metrics)."""
+    from . import analytics
+    return analytics.usage_stats()
 
 
 def height() -> dict:
@@ -352,8 +387,19 @@ def my_positions() -> dict:
 
 def build_server():
     from fastmcp import FastMCP
+    from fastmcp.server.middleware import Middleware
+
+    class UsageLogger(Middleware):
+        """Records every tool call into analytics.usage (grant KPIs)."""
+
+        async def on_call_tool(self, context, call_next):
+            from . import analytics
+            # context.message is CallToolRequestParams with .name
+            analytics.log_usage(getattr(context.message, "name", None) or "unknown")
+            return await call_next(context)
 
     mcp = FastMCP("dydx-agent-gateway")
+    mcp.add_middleware(UsageLogger())
     mcp.tool(list_markets)
     mcp.tool(market_detail)
     mcp.tool(candles)
@@ -370,6 +416,8 @@ def build_server():
     mcp.tool(discover_traders)
     mcp.tool(leaderboard)
     mcp.tool(latest_events)
+    mcp.tool(market_digest)
+    mcp.tool(usage_stats)
     mcp.tool(place_order)
     mcp.tool(cancel_all)
     mcp.tool(my_positions)

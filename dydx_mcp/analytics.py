@@ -25,8 +25,29 @@ def con() -> sqlite3.Connection:
     CREATE TABLE IF NOT EXISTS events(
       id INTEGER PRIMARY KEY, ts TEXT, kind TEXT, subject TEXT,
       payload TEXT, published INT DEFAULT 0);
+    CREATE TABLE IF NOT EXISTS usage(
+      ts TEXT DEFAULT (datetime('now')), tool TEXT);
     """)
     return c
+
+
+def log_usage(tool: str):
+    try:
+        with con() as c:
+            c.execute("INSERT INTO usage(tool) VALUES(?)", (tool,))
+    except Exception:  # noqa: BLE001 - metrics must never break serving
+        pass
+
+
+def usage_stats() -> dict:
+    """Tool-call counters (traction metrics for the grant KPIs)."""
+    with con() as c:
+        total = c.execute("SELECT COUNT(*) FROM usage").fetchone()[0]
+        last24 = c.execute("SELECT COUNT(*) FROM usage WHERE ts > datetime('now','-1 day')").fetchone()[0]
+        last7 = c.execute("SELECT COUNT(*) FROM usage WHERE ts > datetime('now','-7 days')").fetchone()[0]
+        top = c.execute("SELECT tool, COUNT(*) n FROM usage GROUP BY tool ORDER BY n DESC LIMIT 5").fetchall()
+    return {"calls_total": total, "calls_24h": last24, "calls_7d": last7,
+            "top_tools": [(r["tool"], r["n"]) for r in top]}
 
 
 def add_event(kind: str, subject: str, payload: dict, c: sqlite3.Connection | None = None):
