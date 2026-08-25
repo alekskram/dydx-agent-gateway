@@ -33,11 +33,18 @@
 ## Безопасность перед открытием
 
 - Транспорт TLS от Cloudflare; origin остаётся 127.0.0.1.
+- **Origin/Host-валидация на стороне fastmcp** (требование спеки MCP для
+  Streamable HTTP): при запуске передать `allowed_hosts=["dydx.домен"]`,
+  `allowed_origins=[...]` (анти-DNS-rebinding); за балансировщиком —
+  stateless-режим.
+- **/health** — незашифрованный JSON-эндпоинт уже вшит в сервер
+  (`custom_route`), пригоден для Cloudflare health checks и мониторинга.
 - Для человеческих страниц (будущий лидерборд) — Cloudflare Access (email
   OTP) бесплатен до 50 пользователей.
-- Для агентского MCP-URL: пока без auth (read-only инструменты; торговые
-  без ключей всё равно пассивны) — при появлении чувствительных
-  инструментов включить Service Token через Access.
+- Для агентского MCP-URL: read-only инструменты могут работать без auth
+  (торговые без ключей пассивны); при включении чувствительных функций —
+  Service Token через Access или OAuth 2.1 resource server по спеке
+  (RFC 9728 metadata + WWW-Authenticate на 401).
 - Cloudflare скрывает IP сервера; rate-limit правилом 100 req/10s/IP на
   пути `/mcp` — зеркалит наш внутренний лимит.
 

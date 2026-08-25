@@ -67,7 +67,7 @@ Claude Desktop (`claude_desktop_config.json`):
 }
 ```
 
-## Инструменты (19)
+## Инструменты (21)
 
 Публичные (без ключей):
 - `list_markets(limit, sort)` — рынки: цена, объём 24ч, OI, фандинг
@@ -82,7 +82,7 @@ Claude Desktop (`claude_desktop_config.json`):
   sharpe-like, сверка тождества (фантом-детектор; живая проверка: $0.00)
 - `fills_review(address)` — maker/taker, объёмы, рынок-микс
 - `registry_stats` — статистика реестра адресов из сканера блоков
-- `recent_traders(limit, max_hits)` — свежие адреса из реестра (без коммиттеров)
+- `list_traders(limit, max_hits)` — свежие адреса из реестра (без коммиттеров)
 - `discover_traders(limit, min_equity)` — скринер: фондированные активные
   трейдеры с цепи (реестр + проба equity) — стартовая точка для анализа
 - `leaderboard(limit, metric)` — верифицированный топ трейдеров (батч

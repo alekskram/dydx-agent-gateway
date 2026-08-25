@@ -127,7 +127,7 @@ def registry_stats() -> dict:
     return registry.stats()
 
 
-def recent_traders(limit: int = 10, max_hits: int = 100) -> list[dict]:
+def list_traders(limit: int = 10, max_hits: int = 100) -> list[dict]:
     """Recently active trader addresses from the block-scanner registry
     (high-frequency validator committers filtered out by max_hits).
     Feed an address into trader_profile / trader_pnl_stats next."""
@@ -388,6 +388,8 @@ def my_positions() -> dict:
 def build_server():
     from fastmcp import FastMCP
     from fastmcp.server.middleware import Middleware
+    from starlette.requests import Request
+    from starlette.responses import JSONResponse
 
     class UsageLogger(Middleware):
         """Records every tool call into analytics.usage (grant KPIs)."""
@@ -398,29 +400,50 @@ def build_server():
             analytics.log_usage(getattr(context.message, "name", None) or "unknown")
             return await call_next(context)
 
-    mcp = FastMCP("dydx-agent-gateway")
+    mcp = FastMCP(
+        "dydx-agent-gateway",
+        version="0.2.0",
+        instructions=(
+            "Start with market_digest for a briefing (events + funding extremes "
+            "+ leaderboard). To evaluate a trader: trader_profile then "
+            "trader_pnl_stats (limit up to 5000 = ~7 months of history). "
+            "To find traders: discover_traders (funded, on-chain) or "
+            "list_traders (recent registry addresses). Funding rows carry "
+            "oi_usd — ignore markets below ~$100k OI as noise. suggest_stops "
+            "gives an ATR-based risk plan. latest_events returns detector "
+            "output (funding_extreme / oi_spike_no_price / "
+            "liq_cascade_signature / equity_jump)."),
+    )
     mcp.add_middleware(UsageLogger())
-    mcp.tool(list_markets)
-    mcp.tool(market_detail)
-    mcp.tool(candles)
-    mcp.tool(recent_trades)
-    mcp.tool(trader_profile)
-    mcp.tool(height)
-    mcp.tool(funding_heatmap)
-    mcp.tool(market_ta)
-    mcp.tool(suggest_stops)
-    mcp.tool(fills_review)
-    mcp.tool(trader_pnl_stats)
-    mcp.tool(registry_stats)
-    mcp.tool(recent_traders)
-    mcp.tool(discover_traders)
-    mcp.tool(leaderboard)
-    mcp.tool(latest_events)
-    mcp.tool(market_digest)
-    mcp.tool(usage_stats)
-    mcp.tool(place_order)
-    mcp.tool(cancel_all)
-    mcp.tool(my_positions)
+
+    @mcp.custom_route("/health", methods=["GET"])
+    async def health(request: Request) -> JSONResponse:
+        return JSONResponse({"ok": True, "service": "dydx-agent-gateway"})
+    RO = {"readOnlyHint": True}                 # data tools: safe to auto-run
+    RO_IDEM = {"readOnlyHint": True, "idempotentHint": True}
+
+    mcp.tool(list_markets, annotations=RO)
+    mcp.tool(market_detail, annotations=RO)
+    mcp.tool(candles, annotations=RO)
+    mcp.tool(recent_trades, annotations=RO)
+    mcp.tool(trader_profile, annotations=RO)
+    mcp.tool(height, annotations=RO_IDEM)
+    mcp.tool(funding_heatmap, annotations=RO)
+    mcp.tool(market_ta, annotations=RO)
+    mcp.tool(suggest_stops, annotations=RO)
+    mcp.tool(fills_review, annotations=RO)
+    mcp.tool(trader_pnl_stats, annotations=RO)
+    mcp.tool(registry_stats, annotations=RO_IDEM)
+    mcp.tool(list_traders, annotations=RO)
+    mcp.tool(discover_traders, annotations=RO)
+    mcp.tool(leaderboard, annotations=RO)
+    mcp.tool(latest_events, annotations=RO_IDEM)
+    mcp.tool(market_digest, annotations=RO_IDEM)
+    mcp.tool(usage_stats, annotations=RO_IDEM)
+    mcp.tool(place_order, annotations={"readOnlyHint": False})
+    mcp.tool(cancel_all, annotations={"readOnlyHint": False,
+                                      "destructiveHint": True})
+    mcp.tool(my_positions, annotations=RO)
     return mcp
 
 

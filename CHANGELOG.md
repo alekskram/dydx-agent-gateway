@@ -24,3 +24,16 @@
   Desktop/Codex/Cursor, скилл, HTTP+stdio транспорты
 - systemd: 5 юнитов + hardening; WAL-безопасный бэкап (restore проверен)
 - Тесты: suite 15/15; найдены и исправлены API-грабли индексера (5 шт.)
+
+## v0.2.0 (2026-08-25) — стандарты скиллов и MCP
+- Скилл переписан по стандартам skill-creator: description EN с триггерами
+  в видимой зоне (~250 симв), when_to_use (RU, детальные триггеры),
+  metadata.agent.requires.bins; источник — .agents/skills/ в репо
+  (обнаруживаемый корень), самодостаточен (references/data-gotchas.md),
+  синхронизация с ~/.zcode/skills задокументирована
+- MCP-комплианс: tool annotations (readOnlyHint/destructiveHint/
+  idempotentHint — 21 инструмент), instructions сервера (стратегия для
+  агента), /health эндпоинт (custom_route)
+- recent_traders → list_traders (различимость SEP-986 от recent_trades)
+- server.json для официального MCP-реестра (reverse-DNS, черновик)
+- deploy-public.md: origin/host-валидация, OAuth 2.1 заметка
