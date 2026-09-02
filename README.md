@@ -1,177 +1,68 @@
 # dYdX Agent Gateway
 
-MCP-сервер: любой ИИ-агент подключается к dYdX v4 — рыночные данные,
-аналитика трейдеров, (опционально) торговля с ключами пользователя.
+**One MCP server that gives any AI agent full access to dYdX v4** — market data, funding analytics, verified trader PnL, leaderboards, anomaly & liquidation-cascade detectors, and (optional) trading with user-held keys.
 
-## Установка (для чужих машин)
+No dashboards to babysit: your agent *calls* the tools — Claude, Codex, Cursor, Hermes, ZCode or any MCP client.
 
-Пакет `dydx-agent-gateway` ставится из git (после публикации репо) или
-PyPI (позже). Ниже `REPO_URL` = адрес репозитория.
+## Quickstart
 
-**Claude Code (одной командой):**
+**Claude Code — one command** (replace `REPO_URL` after publish):
 ```bash
 claude mcp add dydx -- uvx --from git+REPO_URL dydx-agent-gateway
 ```
 
-**Cursor / любой mcp.json:**
+**Cursor / any `mcp.json`:**
 ```json
 {"mcpServers": {"dydx": {
   "command": "uvx", "args": ["--from", "git+REPO_URL", "dydx-agent-gateway"]}}}
 ```
 
-**Claude Desktop** (stdio, локально): см. `examples/claude-desktop/config.json`
-— команда `uvx --from git+REPO_URL dydx-agent-gateway`.
-
-**Hosted вариант:** `dydx-agent-gateway --http --port 8901`, затем в любом
-клиенте `{"mcpServers": {"dydx": {"type": "http", "url": "http://host:8901/mcp"}}}`.
-
-**ZCode/Claude Code скилл:** скопировать `skills/dydx-gateway/` в
-`~/.zcode/skills/` (или `.claude/skills/`) — агент получает инструкцию
-по инструментам и всем известным API-граблям.
-
-**Только Python (без агента):**
+**Plain Python (no agent needed):**
 ```bash
-uvx --from git+REPO_URL python -c "..."   # или: pip install git+REPO_URL
+pip install git+REPO_URL
+python -c "from dydx_mcp import server; print(server.market_digest()[:500])"
 ```
 
-Зависимости: fastmcp, pycryptodome, ecdsa (ставятся сами). Ровно
-`pip install .` в чистом venv проверен: market/trader-инструменты работают
-сразу; блочный сканер/реестр/детекторы — репо-экстры (systemd-юниты в
-`deploy/`).
-
-## Установка
-
+**Hosted (streamable HTTP):**
 ```bash
-pip install fastmcp          # MCP-фреймворк
-# опционально, для торговых инструментов:
-# pip install v4-client-py   # официальный клиент dYdX (торговля)
+dydx-agent-gateway --http --port 8901
+# client: {"mcpServers": {"dydx": {"type": "http", "url": "http://host:8901/mcp"}}}
 ```
 
-## Запуск (stdio, для Claude Desktop / Codex / любого MCP-клиента)
+Deps: `fastmcp`, `pycryptodome`, `ecdsa` — installed automatically. Verified with a clean-venv `pip install .`; market/trader tools work out of the box, no keys required.
 
-```bash
-python -m dydx_mcp.server
-```
+## Tools (21, annotations-compliant)
 
-Claude Desktop (`claude_desktop_config.json`):
+**Market data** — `list_markets`, `market_detail` (honest 24h change computed from candles), `candles` (OHLCV+OI, 1MIN…1DAY), `recent_trades`, `height` (chain liveness).
 
-```json
-{
-  "mcpServers": {
-    "dydx": {
-      "command": "python",
-      "args": ["-m", "dydx_mcp.server"],
-      "cwd": "/path/to/agent-gateway"
-    }
-  }
-}
-```
+**Analytics** — `funding_heatmap` (all markets, annualized, ranked), `market_ta` (RSI/EMA/ATR/Bollinger, zero TA deps), `suggest_stops` (ATR-based SL/TP/breakeven/trailing + RR).
 
-## Инструменты (21)
+**Trader analytics (the killer feature)** — `trader_profile`, `trader_pnl_stats` (daily PnL, day-winrate, **deposit-adjusted maxDD**, sharpe-like), `fills_review` (maker/taker mix). The PnL engine reconciles the identity `equity-Δ = Δpnl + ΣnetTransfers` per bucket — residual = phantom-data detector. Live-verified on a real market maker: residual $0.0000 across 25 accounts (see `reports/`).
 
-Публичные (без ключей):
-- `list_markets(limit, sort)` — рынки: цена, объём 24ч, OI, фандинг
-- `market_detail(ticker)` — рынок глубоко + свечи + честный 24ч-изм. (по свечам!)
-- `candles(ticker, resolution, limit)` — OHLCV+OI (1MIN…1DAY)
-- `recent_trades(ticker, limit)` — лента сделок
-- `funding_heatmap(limit)` — фандинг всех рынков, ranked, годовая нормализация
-- `market_ta(ticker, resolution)` — RSI14, EMA20/50, ATR14, Bollinger %B
-- `suggest_stops(ticker, side, …)` — ATR-план: SL/TP/breakeven/trailing + RR
-- `trader_profile(address)` — equity, позиции, кривая PnL любого трейдера
-- `trader_pnl_stats(address)` — дневной PnL, day-винрейт, maxDD (деп.-скорр.),
-  sharpe-like, сверка тождества (фантом-детектор; живая проверка: $0.00)
-- `fills_review(address)` — maker/taker, объёмы, рынок-микс
-- `registry_stats` — статистика реестра адресов из сканера блоков
-- `list_traders(limit, max_hits)` — свежие адреса из реестра (без коммиттеров)
-- `discover_traders(limit, min_equity)` — скринер: фондированные активные
-  трейдеры с цепи (реестр + проба equity) — стартовая точка для анализа
-- `leaderboard(limit, metric)` — верифицированный топ трейдеров (батч
-  каждые 6ч: реестр + PnL-движок + флаги фармеров, эвристика v0)
-- `latest_events(limit, kind?)` — события детекторов: funding_extreme /
-  oi_spike_no_price / equity_jump (шина событий в sqlite)
-- `height` — высота цепи (liveness)
+**Discovery** — `leaderboard` (verified top traders, farmer flags), `discover_traders` (funded active addresses from an onchain registry), `list_traders`, `registry_stats`.
 
-Торговые (signer готов, подача после тестнета): `place_order`, `cancel_all`,
-`my_positions`.
+**Anomaly detection** — `latest_events`: `funding_extreme`, `oi_spike_no_price`, `equity_jump`, plus a signature **liquidation-cascade detector** (|Δprice|↑ + OI↓, fresh/confirmed stages). Live catches include ETH +15.8%/h with OI −51.6% (mass short squeeze) and 19%-OI builds with flat price.
 
-## Автоматика (systemd)
+**Trading (opt-in)** — `place_order`, `cancel_all`, `my_positions`. Off by default: requires the user's `DYDX_ETH_KEY`, explicit human consent per order, dry-run planning first. Keys never leave the host; nothing is logged.
 
-| Юнит | Что делает | Период |
-|---|---|---|
-| dydx-scanner.service | блоки → реестр адресов | непрерывно |
-| dydx-mcp.service | MCP endpoint (HTTP) | непрерывно |
-| dydx-detectors.timer | детекторы + алерты (TG/вебхуки) | каждые 5 мин |
-| dydx-leaderboard.timer | пересборка лидерборда | каждые 6 ч |
-| dydx-backup.timer | WAL-безопасный бэкап (backup.sh, 30 дней) | ежедневно 23:40 |
+## Highlights
 
-Публичный URL: инструкция именованного туннеля — `deploy-public.md`.
+- **Zero-heavy-dep signer** (`dydx_mcp/signer.py`): keccak256 + EIP-712 + secp256k1 (RFC6979, low-S) + bech32 + order quantization from live market meta. 12/12 selftest vectors: `python -m dydx_mcp.signer --selftest`.
+- **Data quality watchdog**: 5 documented indexer-API gotchas (see `.agents/skills/dydx-gateway/references/data-gotchas.md`) — the kind of things that silently corrupt naive analytics.
+- **54 tests** (49 offline + 5 online), 75% coverage, CI workflow included.
+- Systemd units for continuous operation: block scanner (onchain address registry), detectors every 5 min, leaderboard every 6h, WAL-safe backups — see README table in the repo docs.
 
-Алерты: `alerts.env` (DYDX_TG_BOT_TOKEN, DYDX_TG_CHAT_ID, DYDX_WEBHOOKS).
+## Repo extras
 
-## Подключение агентов (`examples/`)
+- `examples/` — ready configs for Claude Desktop (stdio + HTTP), Codex, Cursor, an autonomous Python agent (events → funding → leaderboard in one run), webhook receiver.
+- `demos/` — funding watch, real trader deep-dive, consent-gated order plan.
+- `reports/` — monthly data-quality watchdog reports.
+- `.agents/skills/dydx-gateway/` — drop-in agent skill (tool guide + data gotchas) for Claude/ZCode-compatible skill directories.
 
-- `claude-desktop/config.json` (stdio) и `config-http.json` (hosted)
-- `codex/config.toml`, `cursor/mcp.json`
-- `python-agent.py` — автономный мини-агент: события → фандинг →
-  лидерборд одним запуском (проверен живьём)
-- `webhook-receiver.py` — приёмник вебхуков (проверен сквозной доставкой)
-- `alerts.env.example` — Telegram/вебхуки для systemd-юнитов
-- Промпты для агентов и инструкция — `examples/README.md`
+## Safety model
 
-## Отчёты
+Read tools are keyless and safe. Trading tools are disabled unless `DYDX_ETH_KEY` is set; orders require explicit confirmation; a dry-run plan (ATR risk, RR) is always produced first. Alerts credentials live in a gitignored `alerts.env` (see `examples/alerts.env.example`).
 
-`reports/data-quality-2026-08.md` — watchdog №1: сверка тождества 25/25
-аккаунтов (остаток $0.0000), реестр найденных API-граблей.
+## License
 
-## Транспорты
-
-- stdio: `python -m dydx_mcp.server` (локальные агенты, Claude Desktop)
-- HTTP (streamable): systemd `dydx-mcp.service` → 127.0.0.1:8901/mcp —
-  для публичного URL нужен reverse-proxy с TLS + auth-токен (в планах)
-
-## Signer (`dydx_mcp/signer.py`)
-
-Собственный zero-heavy-dep подписыватель: keccak256 (pycryptodome) + EIP-712
-(Order / ApiCredentials; domain `dydx`/1/1337) + secp256k1 RFC6979 с
-recovery-id + bech32 (dydx1…) + квантизация ордеров из живой меты рынка
-(size → base-quantums кратно stepBaseQuantums; price → subticks через
-tickSize/subticksPerTick). Самотест: 10/10 PASS (вектора keccak, рекавери
-раунд-трип, low-S, packing, bech32 раунд-трип реального адреса, кванты).
-Ключ: env DYDX_ETH_KEY (hex) — только от пользователя, не логируется.
-`python -m dydx_mcp.signer --selftest | --ticker ETH-USD --side BUY --size 0.05 --dry`
-Живая подача — после тестнет-фосета (Discord dYdX): создать API-ключи
-(EIP-712 ApiCredentials → POST /v4/api-keys) и HMAC-подпись запросов.
-
-## PnL-движок (`dydx_mcp/pnl_engine.py`)
-
-Считает по кривой historical-pnl: дневной PnL, day-винрейт, maxDD на
-депозит-скорректированном капитале, sharpe-like, лучшие/худшие дни.
-Ключ: тождество equity-Δ = Δpnl + ΣnetTransfers (netTransfers — ПО-БАКЕТНЫЙ
-поток, не кумулятив!) — остаток тождества = детектор фантомных данных.
-Живая проверка: маркет-мейкер, 42 дня, остаток = $0.00, day-winrate 64.3%,
-avg $433/день, maxDD 11.9%.
-
-## Демо (`demos/`, всё через MCP-клиент in-process)
-
-1. `demo1_funding_watch.py` — ватч фандинга: нашёл SHIB +0.147%/1h
-   (≈+1284% годовых, лонги платят) — готовый алерт.
-2. `demo2_trader_check.py` — DD-карта реального маркет-мейкера: equity
-   $63.5k, PnL $488k, 68 позиций, 100 филлов, maker 21%.
-3. `demo3_order_consent.py` — ордер-план с ATR-риском и гейтом согласия
-   человека (dry-run).
-
-## Сканер (`scanner.py` + systemd `dydx-scanner.service`)
-
-Блоки dYdX-чейна → sqlite-реестр активных адресов (`data/registry.sqlite`),
-с валидацией bech32-формы (43 символа). Работает как системный сервис:
-`systemctl status dydx-scanner`; реестр растёт непрерывно. Разовый проход:
-`python scanner.py --blocks 200`.
-
-## Демо-сценарии (для X-треда и заявки в dYdX EDP)
-
-1. «Агент следит за фандингом»: list_markets по |funding| каждые N минут,
-   алерт при аномалии.
-2. «Проверь трейдера перед копированием»: trader_profile по адресу из
-   лидерборда — equity, позиции, динамика PnL.
-3. «Торгуй по моему правилу»: агент размещает лимитный ордер после явного
-   подтверждения человеком.
+MIT. Not affiliated with dYdX Trading Inc.

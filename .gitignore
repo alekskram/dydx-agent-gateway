@@ -6,3 +6,8 @@ data/*.sqlite-wal
 data/*.sqlite-shm
 alerts.env
 *.log
+.coverage
+
+# внутренние документы (не для публикации)
+PLAN.md
+BINGX-BEST.md

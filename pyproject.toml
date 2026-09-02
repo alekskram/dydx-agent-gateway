@@ -1,6 +1,6 @@
 [project]
 name = "dydx-agent-gateway"
-version = "0.2.1"
+version = "0.2.2"
 description = "MCP gateway for AI agents to dYdX v4: market data, funding heatmap, TA, verified trader analytics (deposit-adjusted PnL), leaderboards, anomaly & liquidation-cascade detectors, optional EIP-712 trading with user-held keys."
 readme = "README.md"
 requires-python = ">=3.11"
