@@ -1,6 +1,6 @@
 # dYdX Agent Gateway
 
-**One MCP server that gives any AI agent full access to dYdX v4** — market data, funding analytics, verified trader PnL, leaderboards, and anomaly & liquidation-cascade detectors. Analytics-only by design — no trading, no keys.
+**One MCP server that gives any AI agent analytics access to dYdX v4** — market data, funding analytics, verified trader PnL, leaderboards, and anomaly & liquidation-cascade detectors. Analytics-only by design — no trading, no keys.
 
 No dashboards to babysit: your agent *calls* the tools — Claude, Codex, Cursor, Hermes, ZCode or any MCP client.
 
