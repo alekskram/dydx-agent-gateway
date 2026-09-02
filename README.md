@@ -6,20 +6,20 @@ No dashboards to babysit: your agent *calls* the tools — Claude, Codex, Cursor
 
 ## Quickstart
 
-**Claude Code — one command** (replace `REPO_URL` after publish):
+**Claude Code — one command** (replace `https://github.com/alekskram/dydx-agent-gateway` after publish):
 ```bash
-claude mcp add dydx -- uvx --from git+REPO_URL dydx-agent-gateway
+claude mcp add dydx -- uvx --from git+https://github.com/alekskram/dydx-agent-gateway dydx-agent-gateway
 ```
 
 **Cursor / any `mcp.json`:**
 ```json
 {"mcpServers": {"dydx": {
-  "command": "uvx", "args": ["--from", "git+REPO_URL", "dydx-agent-gateway"]}}}
+  "command": "uvx", "args": ["--from", "git+https://github.com/alekskram/dydx-agent-gateway", "dydx-agent-gateway"]}}}
 ```
 
 **Plain Python (no agent needed):**
 ```bash
-pip install git+REPO_URL
+pip install git+https://github.com/alekskram/dydx-agent-gateway
 # or, from a local checkout: pip install .
 python -c "from dydx_mcp import server; import json; print(json.dumps(server.market_digest(), default=str)[:500])"
 ```

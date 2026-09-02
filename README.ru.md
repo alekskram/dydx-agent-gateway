@@ -8,21 +8,21 @@ MCP-сервер: любой ИИ-агент подключается к dYdX v4
 ## Установка (для чужих машин)
 
 Пакет `dydx-agent-gateway` ставится из git (после публикации репо) или
-PyPI (позже). Ниже `REPO_URL` = адрес репозитория.
+PyPI (позже). Ниже `https://github.com/alekskram/dydx-agent-gateway` = адрес репозитория.
 
 **Claude Code (одной командой):**
 ```bash
-claude mcp add dydx -- uvx --from git+REPO_URL dydx-agent-gateway
+claude mcp add dydx -- uvx --from git+https://github.com/alekskram/dydx-agent-gateway dydx-agent-gateway
 ```
 
 **Cursor / любой mcp.json:**
 ```json
 {"mcpServers": {"dydx": {
-  "command": "uvx", "args": ["--from", "git+REPO_URL", "dydx-agent-gateway"]}}}
+  "command": "uvx", "args": ["--from", "git+https://github.com/alekskram/dydx-agent-gateway", "dydx-agent-gateway"]}}}
 ```
 
 **Claude Desktop** (stdio, локально): см. `examples/claude-desktop/config.json`
-— команда `uvx --from git+REPO_URL dydx-agent-gateway`.
+— команда `uvx --from git+https://github.com/alekskram/dydx-agent-gateway dydx-agent-gateway`.
 
 **Hosted вариант:** `dydx-agent-gateway --http --port 8901`, затем в любом
 клиенте `{"mcpServers": {"dydx": {"type": "http", "url": "http://host:8901/mcp"}}}`.
@@ -33,7 +33,7 @@ claude mcp add dydx -- uvx --from git+REPO_URL dydx-agent-gateway
 
 **Только Python (без агента):**
 ```bash
-uvx --from git+REPO_URL python -c "..."   # или: pip install git+REPO_URL
+uvx --from git+https://github.com/alekskram/dydx-agent-gateway python -c "..."   # или: pip install git+https://github.com/alekskram/dydx-agent-gateway
 ```
 
 Зависимости: fastmcp, pycryptodome, ecdsa (ставятся сами). Ровно

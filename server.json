@@ -1,6 +1,6 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
-  "name": "io.github.ventures/dydx-agent-gateway",
+  "name": "io.github.alekskram/dydx-agent-gateway",
   "title": "dYdX Agent Gateway",
   "description": "Analytics-only MCP gateway to dYdX v4: market data, funding, trader PnL, anomalies. No keys.",
   "version": "0.2.4",
