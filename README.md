@@ -39,11 +39,11 @@ Requires Python >= 3.11. Deps: `fastmcp`, `pycryptodome`, `ecdsa` — installed 
 
 **Analytics** — `funding_heatmap` (all markets, annualized, ranked), `market_ta` (RSI/EMA/ATR/Bollinger, zero TA deps), `suggest_stops` (ATR-based SL/TP/breakeven/trailing + RR).
 
-**Trader analytics (the killer feature)** — `trader_profile`, `trader_pnl_stats` (daily PnL, day-winrate, **deposit-adjusted maxDD**, sharpe-like), `fills_review` (maker/taker mix). The PnL engine reconciles the identity `equity-Δ = Δpnl + ΣnetTransfers` per bucket — residual = phantom-data detector. Live-verified on a real market maker: residual $0.0000 across 25 accounts (see `reports/`).
+**Trader analytics (the killer feature)** — `trader_profile`, `trader_pnl_stats` (daily PnL, day-winrate, **deposit-adjusted maxDD**, sharpe-like), `fills_review` (maker/taker mix). The PnL engine reconciles the identity `equity-Δ = Δpnl + ΣnetTransfers` per bucket — residual = phantom-data detector. Live-verified on a real market maker (data as of 2026-08): residual $0.0000 across 25 accounts (see `reports/`).
 
 **Discovery** — `market_digest` (one-call briefing: events + funding extremes + leaderboard top — start here), `leaderboard` (verified top traders, farmer flags), `discover_traders` (funded active addresses from an onchain registry), `list_traders`, `registry_stats`, `usage_stats` (tool-call counters since deployment).
 
-**Anomaly detection** — `latest_events`: `funding_extreme`, `oi_spike_no_price`, `equity_jump`, plus a signature **liquidation-cascade detector** (|Δprice|↑ + OI↓, fresh/confirmed stages). Live catches include ETH +15.8%/h with OI −51.6% (mass short squeeze) and 19%-OI builds with flat price.
+**Anomaly detection** — `latest_events`: `funding_extreme`, `oi_spike_no_price`, `equity_jump`, plus a signature **liquidation-cascade detector** (|Δprice|↑ + OI↓, fresh/confirmed stages). Live catches include ETH +15.8%/h with OI −51.6% (mass short squeeze) and 19%-OI builds with flat price (both as of 2026-08).
 
 
 ## Highlights

@@ -1,8 +1,9 @@
 {
-  "$schema": "https://raw.githubusercontent.com/modelcontextprotocol/registry/main/schema/registry-server.schema.json",
-  "name": "io.ventures.dydx-agent-gateway",
-  "description": "MCP gateway for AI agents to dYdX v4: market data, funding heatmap, technical analysis, verified trader analytics (deposit-adjusted PnL with reconciliation), leaderboards, anomaly detection (funding extremes, OI spikes, liquidation-cascade signatures, equity jumps). Analytics-only: no trading tools, no keys.",
-  "version": "0.2.3",
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.ventures/dydx-agent-gateway",
+  "title": "dYdX Agent Gateway",
+  "description": "Analytics-only MCP gateway to dYdX v4: market data, funding, trader PnL, anomalies. No keys.",
+  "version": "0.2.4",
   "tools": [
     {"name": "market_digest", "description": "One-call briefing: events, funding extremes, leaderboard top"},
     {"name": "trader_pnl_stats", "description": "Deposit-adjusted PnL, day-winrate, maxDD, data-accuracy residual"},
@@ -10,9 +11,14 @@
   ],
   "packages": [
     {
-      "registry_type": "pypi",
+      "registryType": "pypi",
       "identifier": "dydx-agent-gateway",
-      "version": "0.2.3"
+      "version": "0.2.4",
+      "transport": {"type": "stdio"}
     }
-  ]
+  ],
+  "repository": {
+    "url": "https://github.com/ventures/dydx-agent-gateway",
+    "source": "github"
+  }
 }

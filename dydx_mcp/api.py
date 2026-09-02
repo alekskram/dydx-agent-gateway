@@ -49,10 +49,16 @@ def height() -> dict:
 
 
 def markets() -> dict:
+    """Perpetual markets keyed by ticker (60s cache). Only status=ACTIVE
+    markets are kept: FINAL_SETTLEMENT ones report zero volume but stale
+    funding rates, which would pollute funding_heatmap, detectors and
+    list_markets."""
     global _MARKETS_CACHE
     now = time.monotonic()
     if now - _MARKETS_CACHE[0] > _MARKETS_TTL:
-        _MARKETS_CACHE = (now, get("perpetualMarkets").get("markets", {}))
+        raw = get("perpetualMarkets").get("markets", {})
+        _MARKETS_CACHE = (now, {t: m for t, m in raw.items()
+                                if m.get("status") == "ACTIVE"})
     return _MARKETS_CACHE[1]
 
 

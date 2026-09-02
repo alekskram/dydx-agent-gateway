@@ -4,7 +4,7 @@ description: dYdX v4 perps via local MCP gateway — market data, funding heatma
 when_to_use: Использовать при любых вопросах про dYdX — рынки, цены, фандинг, OI, объёмы; аномалии (всплески OI без цены, каскады ликвидаций, экстрим-фандинг, прыжки equity трейдеров); анализ трейдера по адресу (equity, PnL-кривая, day-винрейт, maxDD, флаг фармера) перед копированием; лидерборд и скрининг трейдеров с цепи; TA и ATR-планы стопов. Триггер-слова: dYdX, перпы, funding, OI anomaly, trader PnL, проверь трейдера, liquidation cascade.
 metadata:
   author: ventures
-  version: "0.2.3"
+  version: "0.2.4"
   agent:
     requires:
       bins: ["python3"]

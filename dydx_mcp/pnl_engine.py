@@ -15,14 +15,14 @@ def compute(rows: list[dict]) -> dict:
         return {}
     rows = list(reversed(rows))  # oldest -> newest
 
-    eq0 = float(rows[0].get("equity", 0))
+    eq0 = float(rows[0].get("equity") or 0)
     points = []
     for r in rows:
         t = (r.get("createdAt") or "")[:19]
         points.append({
-            "t": t, "equity": float(r.get("equity", 0)),
-            "pnl": float(r.get("totalPnl", 0)),
-            "net_tr": float(r.get("netTransfers", 0)),
+            "t": t, "equity": float(r.get("equity") or 0),
+            "pnl": float(r.get("totalPnl") or 0),
+            "net_tr": float(r.get("netTransfers") or 0),
         })
 
     # netTransfers is per-bucket flow (not cumulative) -> running sum
@@ -77,10 +77,11 @@ def compute(rows: list[dict]) -> dict:
         "max_drawdown_pct": round(mdd * 100, 2),
         "best_day": best, "worst_day": worst,
         "identity_max_residual_usd": round(max_resid, 4),
-        "summary": (f"{len(days)} days, winrate {wins}/{len(days)} "
-                    f"({wins / len(days) * 100:.0f}%), avg ${mean:,.0f}/day, "
-                    f"maxDD {mdd * 100:.1f}%, identity residual ≤ "
-                    f"${max_resid:.2f}"),
+        "summary": ((f"{len(days)} days, winrate {wins}/{len(days)} "
+                     f"({wins / len(days) * 100:.0f}%), avg ${mean:,.0f}/day, "
+                     f"maxDD {mdd * 100:.1f}%, identity residual ≤ "
+                     f"${max_resid:.2f}") if days else
+                    "0 days (single point), no daily stats"),
     }
 
 

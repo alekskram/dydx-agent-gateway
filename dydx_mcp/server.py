@@ -44,7 +44,10 @@ def market_detail(ticker: str) -> dict:
     (the raw API priceChange field is unreliable), OI, funding."""
     m = api.markets().get(ticker)
     if not m:
-        raise ValueError(f"unknown ticker {ticker}")  # -> isError per MCP spec
+        # FINAL_SETTLEMENT markets are filtered by api.markets() — a missing
+        # ticker may still exist as a delisted market, say so honestly.
+        raise ValueError(f"unknown or delisted ticker {ticker} "
+                         "(settled markets are not served)")  # -> isError per MCP spec
     cnd = api.candles(ticker, "1HOUR", 25)
     change24h = None
     if len(cnd) >= 25:
@@ -167,6 +170,14 @@ def market_digest() -> dict:
     ev = analytics.latest_events(5)
     events = [{"kind": e["kind"], "subject": e["subject"],
                **e["payload"]} for e in ev]
+    lb_top = lb.get("top")
+    if lb_top:
+        addr = lb_top[0]["address"][:10]
+        lb_first = (f"{addr}… +${lb_top[0]['pnl_window']:,.0f}"
+                    if lb_top[0]["pnl_window"] is not None
+                    else f"{addr}… (no pnl window)")
+    else:
+        lb_first = "n/a"
     return {
         "events": events,
         "funding": heat["top"],
@@ -177,9 +188,7 @@ def market_digest() -> dict:
                     + (heat["top"][0]["ticker"] + " "
                        + str(heat["top"][0]["funding_pct_annualized"]) + "% ann"
                        if heat["top"] else "none")
-                    + f" | leaderboard #1: "
-                    + (f"{lb['top'][0]['address'][:10]}… +${lb['top'][0]['pnl_window']:,.0f}"
-                       if lb.get("top") else "n/a")),
+                    + f" | leaderboard #1: " + lb_first),
     }
 
 
@@ -374,7 +383,7 @@ def build_server():
 
     mcp = FastMCP(
         "dydx-agent-gateway",
-        version="0.2.3",
+        version="0.2.4",
         instructions=(
             "Start with market_digest for a briefing (events + funding extremes "
             "+ leaderboard). To evaluate a trader: trader_profile then "

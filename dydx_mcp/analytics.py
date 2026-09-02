@@ -113,5 +113,6 @@ def leaderboard(limit: int = 20, metric: str = "pnl_window") -> dict:
         "metric": metric,
         "top": [{**dict(r), "farmer_flag": bool(r["farmer_flag"])} for r in rows],
         "summary": (f"top by {metric}: " + ", ".join(
-            f"{r['address'][:10]}… ${r[key]:,.0f}" for r in rows[:5])),
+            (f"{r['address'][:10]}… ${r[key]:,.0f}" if r[key] is not None
+             else f"{r['address'][:10]}… n/a") for r in rows[:5])),
     }
