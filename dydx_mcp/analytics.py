@@ -41,7 +41,7 @@ def log_usage(tool: str):
 
 
 def usage_stats() -> dict:
-    """Tool-call counters (traction metrics for the grant KPIs)."""
+    """Tool-call counters (traction metrics for usage tracking)."""
     with con() as c:
         total = c.execute("SELECT COUNT(*) FROM usage").fetchone()[0]
         last24 = c.execute("SELECT COUNT(*) FROM usage WHERE ts > datetime('now','-1 day')").fetchone()[0]

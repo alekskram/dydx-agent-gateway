@@ -1,7 +1,7 @@
 # Changelog
 
-## v0.2.4 (2026-09-02) — pre-publication hardening (MEC-26)
-- Crash fixes (found in the MEC-21 guild review, each with a regression test):
+## v0.2.4 (2026-09-02) — pre-publication hardening (review)
+- Crash fixes (found in the review guild review, each with a regression test):
   pnl_engine.compute no longer raises on None equity/totalPnl/netTransfers
   fields (API nulls) or on a single history point (ZeroDivisionError in the
   summary line); market_digest/leaderboard summaries no longer raise
@@ -37,7 +37,7 @@
 - `market_digest` — одно-вызовной брифинг: события детекторов + фандинг
   + топ лидерборда
 - `usage_stats` + учёт вызовов инструментов (middleware → sqlite) —
-  метрики тракции для грантовых KPI (вызовы/24ч/7д, топ инструментов)
+  метрики использования (вызовы/24ч/7д, топ инструментов)
 - `watchdog.py` + таймер dydx-watchdog (1-е число, 09:00) — data-quality
   отчёт генерируется автоматически
 - README: юнит dydx-backup в таблице автоматки, ссылка на deploy-public.md

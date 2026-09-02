@@ -373,7 +373,7 @@ def build_server():
     from starlette.responses import JSONResponse
 
     class UsageLogger(Middleware):
-        """Records every tool call into analytics.usage (grant KPIs)."""
+        """Records every tool call into analytics.usage (usage metrics)."""
 
         async def on_call_tool(self, context, call_next):
             from . import analytics

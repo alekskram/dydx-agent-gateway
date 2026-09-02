@@ -1,4 +1,4 @@
-"""MEC-26: regression tests for v0.2.4 crashes found in MEC-21/MEC-22 —
+"""review: regression tests for v0.2.4 crashes found in review/review —
 None fields from the indexer (TypeError in pnl_engine / digest / leaderboard
 summary formatting), ZeroDivisionError on single-point PnL windows, and
 FINAL_SETTLEMENT (dead) markets leaking into market listings and the
@@ -13,7 +13,7 @@ from dydx_mcp.pnl_engine import compute
 # ------------------------------------------------------------ pnl_engine
 
 def test_pnl_engine_none_fields():
-    """REGRESSION MEC-26: compute() raised TypeError (float(None)) when the
+    """REGRESSION review: compute() raised TypeError (float(None)) when the
     indexer returns rows with equity/totalPnl/netTransfers = None."""
     rows = [
         {"createdAt": "2026-01-02T00:00:00Z", "equity": "120",
@@ -26,7 +26,7 @@ def test_pnl_engine_none_fields():
 
 
 def test_pnl_engine_single_point_no_zero_division():
-    """REGRESSION MEC-26: compute() raised ZeroDivisionError in summary
+    """REGRESSION review: compute() raised ZeroDivisionError in summary
     (wins/len(days)) when the PnL window has a single daily point."""
     rows = [{"createdAt": "2026-01-01T00:00:00Z", "equity": "100",
              "totalPnl": "0", "netTransfers": "0"}]
@@ -37,8 +37,8 @@ def test_pnl_engine_single_point_no_zero_division():
 # --------------------------------------------------------- market_digest
 
 def test_market_digest_null_pnl_window(monkeypatch):
-    """REGRESSION MEC-26: market_digest() raised TypeError formatting a
-    leaderboard row with pnl_window=None (f"+${None:,.0f}") — MEC-21."""
+    """REGRESSION review: market_digest() raised TypeError formatting a
+    leaderboard row with pnl_window=None (f"+${None:,.0f}") — review."""
     monkeypatch.setattr(srv, "funding_heatmap",
                         lambda *a, **k: {"top": []})
     monkeypatch.setattr(srv, "leaderboard",
@@ -54,7 +54,7 @@ def test_market_digest_null_pnl_window(monkeypatch):
 # ------------------------------------------------------- analytics store
 
 def test_analytics_leaderboard_null_metric_summary():
-    """REGRESSION MEC-26: analytics.leaderboard() raised TypeError in
+    """REGRESSION review: analytics.leaderboard() raised TypeError in
     summary (f"${None:,.0f}") when the top row's metric column is NULL."""
     with analytics.con() as c:
         c.execute("DELETE FROM leaderboard_runs")
@@ -71,7 +71,7 @@ def test_analytics_leaderboard_null_metric_summary():
 # ------------------------------------------------- dead-market filtering
 
 def test_api_markets_filters_final_settlement(monkeypatch):
-    """REGRESSION MEC-26: api.markets() leaked FINAL_SETTLEMENT (delisted)
+    """REGRESSION review: api.markets() leaked FINAL_SETTLEMENT (delisted)
     markets into listings and the funding heatmap, where their garbage
     extreme funding polluted rankings."""
     def fake_get(path, params=None, retries=3):

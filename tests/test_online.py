@@ -65,7 +65,7 @@ def test_freshness_registry_cursor_lag():
     from dydx_mcp import api
     prod = Path(os.environ.get(
         "DYDX_TEST_REGISTRY",
-        "/root/ventures/dydx-grant/agent-gateway/data/registry.sqlite"))
+        os.environ.get("DYDX_TEST_REGISTRY", "")))
     if not os.access(prod, os.R_OK):
         # host-specific: prod registry not readable/present on this host
         pytest.skip(f"prod registry not accessible on this host: {prod}")

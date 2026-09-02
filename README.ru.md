@@ -158,7 +158,7 @@ day-winrate 64.3%, avg $433/день, maxDD 11.9%.
 `systemctl status dydx-scanner`; реестр растёт непрерывно. Разовый проход:
 `python scanner.py --blocks 200`.
 
-## Демо-сценарии (для X-треда и заявки в dYdX EDP)
+## Примеры задач для агентов
 
 1. «Агент следит за фандингом»: list_markets по |funding| каждые N минут,
    алерт при аномалии.
