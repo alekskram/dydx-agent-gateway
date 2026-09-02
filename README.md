@@ -27,15 +27,27 @@ command = "uvx"
 args = ["--from", "git+https://github.com/alekskram/dydx-agent-gateway", "dydx-agent-gateway"]
 ```
 
-**ZCode** — two parts: register the MCP server + copy the agent skill.
+**ZCode** — register the MCP server and copy the agent skill (all copy-paste):
 ```bash
-# 1) register the server in ~/.zcode/cli/config.json  (workspace .zcode/config.json also works)
-#    "mcp": {"servers": {"dydx": {"type": "http", "url": "http://127.0.0.1:8901/mcp"}}}
-#    (or point it at a local stdio process instead of the hosted form)
+# 1) start the gateway (keep it running)
+uvx --from git+https://github.com/alekskram/dydx-agent-gateway dydx-agent-gateway --http --port 8901 &
 
-# 2) copy the skill (tool guide + data gotchas) next to it
-git clone https://github.com/alekskram/dydx-agent-gateway /tmp/dag
-cp -r /tmp/dag/.agents/skills/dydx-gateway ~/.zcode/skills/
+# 2) register it (merges into ~/.zcode/cli/config.json; workspace .zcode/config.json works too)
+python3 - <<'PY'
+import json, os
+p = os.path.expanduser("~/.zcode/cli/config.json")
+os.makedirs(os.path.dirname(p), exist_ok=True)
+cfg = json.load(open(p)) if os.path.exists(p) else {}
+cfg.setdefault("mcp", {}).setdefault("servers", {})["dydx"] = {
+    "type": "http", "url": "http://127.0.0.1:8901/mcp"}
+json.dump(cfg, open(p, "w"), indent=2)
+print("dydx MCP server registered:", p)
+PY
+
+# 3) copy the agent skill (tool guide + data gotchas)
+git clone -q --depth 1 https://github.com/alekskram/dydx-agent-gateway /tmp/dag
+cp -r /tmp/dag/.agents/skills/dydx-gateway ~/.zcode/skills/ && rm -rf /tmp/dag
+echo "ZCode setup done — restart your session and call any dydx tool"
 ```
 
 **Plain Python:**
