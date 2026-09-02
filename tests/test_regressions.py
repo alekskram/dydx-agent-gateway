@@ -85,7 +85,7 @@ def test_api_markets_filters_final_settlement(monkeypatch):
         }}
 
     monkeypatch.setattr(api, "get", fake_get)
-    monkeypatch.setattr(api, "_MARKETS_CACHE", (0.0, {}))  # bust TTL cache
+    monkeypatch.setattr(api, "_MARKETS_CACHE", (-1e9, {}))  # bust TTL cache
     assert set(api.markets()) == {"BTC-USD"}
 
     # same data through the server tools

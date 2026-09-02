@@ -157,11 +157,11 @@ def test_markets_ttl_cache(monkeypatch):
         return {"markets": {"ETH-USD": {"oraclePrice": "1"}}}
 
     monkeypatch.setattr(api, "get", fake_get)
-    api._MARKETS_CACHE = (0.0, {})
+    api._MARKETS_CACHE = (-1e9, {})  # всегда протухший (monotonic может быть < TTL на свежих VM)
     api.markets()
     api.markets()
     assert calls["n"] == 1  # second call served from cache
-    api._MARKETS_CACHE = (0.0, {})  # cleanup for other tests
+    api._MARKETS_CACHE = (-1e9, {})  # всегда протухший (monotonic может быть < TTL на свежих VM)  # cleanup for other tests
 
 
 def test_candles_normalized_chronological(monkeypatch):
