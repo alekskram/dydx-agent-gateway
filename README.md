@@ -66,3 +66,13 @@ Read tools are keyless and safe. Trading tools are disabled unless `DYDX_ETH_KEY
 ## License
 
 MIT. Not affiliated with dYdX Trading Inc.
+
+## Roadmap: multi-venue core
+
+Venue specifics are deliberately isolated in two modules — `dydx_mcp/api.py`
+(indexer HTTP client, single `BASE` constant) and `dydx_mcp/signer.py`
+(EIP-712/bech32/quantization). Everything else — PnL engine, detectors
+(funding/OI/cascades/equity), TA, discovery pipeline — is venue-agnostic
+math over normalized OHLCV/OI/equity structures. Porting to another
+perps venue (Hyperliquid, TON DEX, …) means writing a new `api.py` +
+`signer.py`, not reworking the core.
