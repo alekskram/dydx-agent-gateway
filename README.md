@@ -51,7 +51,7 @@ Requires Python >= 3.11. Deps: `fastmcp`, `pycryptodome`, `ecdsa` — installed 
 - **Zero-heavy-dep signer** (`dydx_mcp/signer.py`): keccak256 + EIP-712 + secp256k1 (RFC6979, low-S) + bech32 + order quantization from live market meta. 12/12 selftest vectors: `python -m dydx_mcp.signer --selftest`.
 - **Data quality watchdog**: 5 documented indexer-API gotchas (see `.agents/skills/dydx-gateway/references/data-gotchas.md`) — the kind of things that silently corrupt naive analytics.
 - **54 tests** (49 offline + 5 online), 75% coverage, CI workflow included.
-- Systemd units for continuous operation: block scanner (onchain address registry), detectors every 5 min, leaderboard every 6h, WAL-safe backups (table in README.ru.md).
+- Systemd units for continuous operation: block scanner (onchain address registry), detectors every 5 min, leaderboard every 6h, WAL-safe backups (see deploy notes).
 
 ## Repo extras
 
