@@ -431,7 +431,7 @@ def suggest_stops(ticker: str, side: str, entry: float | None = None,
 def fills_review(address: str, subaccount: int = 0, limit: int = 100) -> dict:
     """Execution review from the latest fills: maker/taker split, per-market
     distribution, traded volume, avg fill size. (Per-fill PnL is not exposed
-    by the indexer; win-rate needs the PnL-curve engine — planned.)
+    by the indexer; use trader_pnl_stats for win-rate.)
     Key fields: fills_sampled (count), maker_share_pct (0-100),
     sampled_volume_USD, avg_fill_USD, top_markets (top 5 by fill count).
     Returns {"summary": "no fills"} for accounts with no fills.

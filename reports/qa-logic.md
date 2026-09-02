@@ -1,18 +1,18 @@
 # dydx-agent-gateway — Logical QA report (final)
 
-Ticket MEC-36 (phase 3 of MEC-33) · 2026-09-02 · Analyst (MECorp) · final report for
-TechLead/owner review — findings NOT fixed, no code was touched.
+Ticket review (phase 3 of review) · 2026-09-02 · Analyst  · final report for
+TechLead/maintainer review — findings NOT fixed, no code was touched.
 
 ## Method and headline counters
 
-- **Phase 1 (MEC-34, Analyst):** 59 live calls against the production MCP gateway
+- **Phase 1 (review, Analyst):** 59 live calls against the production MCP gateway
   `http://127.0.0.1:8901/mcp` — 3–4 varied inputs per each of the 18 tools; raw responses
   checkpointed to `/tmp/mec34/NN-<tag>.json` (+ `manifest.json`).
 - Every invariant was recomputed **in code** (not by eye) against: (a) the gateway's own saved
   snapshot, (b) fresh raw dYdX v4 indexer REST data, (c) repo math replicated from
   `dydx_mcp/server.py` / `pnl_engine.py` (v0.2.4). "PASS" means exact match or within the
   documented rounding/drift tolerance — never "looks plausible".
-- **Phase 2 (MEC-35, Researcher):** independent re-verification — 13 further live calls across
+- **Phase 2 (review, Researcher):** independent re-verification — 13 further live calls across
   all 5 anomalies, own same-basis recompute of `server.py` formulas on the gateway's own
   candles, plus the checkpointed records. Verdicts per anomaly: reproducibility /
   gateway-bug-vs-dydx-data / severity.
@@ -59,7 +59,7 @@ equal). DOGE 1H reproduced **EXACTLY** (`rsi 44.1==44.1, atr 0.0005==0.0005, pct
 proof the formulas are implemented correctly. Hard gates all PASS (RSI∈[0,100], zone matches
 printed RSI, %B bounded).
 
-**Researcher verdict (MEC-35).** (a) NOT reproducible as a bug: same-basis recompute of
+**Researcher verdict (review).** (a) NOT reproducible as a bug: same-basis recompute of
 `_rsi/_atr/_ema/_pctB` on 120 candles of their own candles-call (seconds after market_ta) matched
 the gateway to the last digit — BTC 1H `rsi 50.9==50.9, atr 446.8244==446.8244, pctB 0.65==0.65,
 trend down==down`; DOGE 1H `rsi 44.1==44.1, atr 0.0004==0.0004, pctB 0.40==0.40`. The "drift" is
@@ -79,7 +79,7 @@ RR=2.5/1.5=1.67; BE=0.08148+0.0005=0.082. But printed entry is rounded to 2dp (0
 (−1.4×/5.4×, RR-from-printed 3.86 vs claimed 1.67). ATR 4dp rounding (0.0005 vs ~0.00046) ≈ 9%
 quantization of true risk. BTC/ETH unaffected (values ≫ rounding step).
 
-**Researcher verdict (MEC-35).** (a) Reproduces: fresh DOGE call `@ 0.08138: SL 0.08078 /
+**Researcher verdict (review).** (a) Reproduces: fresh DOGE call `@ 0.08138: SL 0.08078 /
 TP 0.08238` — summary holds truth (SL=0.08138−1.5×0.0004=0.08078 ✓, TP=0.08138+2.5×0.0004=0.08238 ✓,
 BE≈0.0818 ✓, RR=2.5/1.5=1.67 ✓) while printed fields break the LONG invariant (implied −2.0×/+6.0×,
 RR-from-printed 2.00 vs 1.67). Two independent reproductions (0.0807 / 0.0808 printed SL), same
@@ -96,7 +96,7 @@ deposit-adjusted curve `equity−ΣnetTransfers` with a near-zero peak: eq0=$9.8
 min(perf)=−$19423.28). Identity residual stays 0.0000 and day-winrate matches (W1/L4 → 2.3%) —
 only the % interpretation breaks: >100% DD is not human-meaningful.
 
-**Researcher verdict (MEC-35).** (a) Reproduces deterministically: same address, same 2711.54% on
+**Researcher verdict (review).** (a) Reproduces deterministically: same address, same 2711.54% on
 two windows (1000 and 500 points) ~5 min apart; equityΔ −8175.60 + netTransfers +150402.19 →
 eq0 = $9.79 ≈ $9.80. (b) Formally **not a computation bug**: the identity converges exactly; >100%
 DD is an artifact of the peak-relative formula on a deposit-adjusted curve with an almost-zero
@@ -114,8 +114,8 @@ computation on finalized candles gives −0.713%. Formula-internal check (ann ==
 rate×24×365 on all 5 heatmap rows, ≤0.06pp) PASSes; exact cross-time equality is impossible by
 construction.
 
-**Researcher verdict (MEC-35).** (a) Reproduces as a CLASS, confirmed by three independent
-snapshots the same day: XMR ann 173.5% (MEC-30, ~17:50Z) → 215.2% (Analyst, 18:34Z) → 274.2%
+**Researcher verdict (review).** (a) Reproduces as a CLASS, confirmed by three independent
+snapshots the same day: XMR ann 173.5% (review, ~17:50Z) → 215.2% (Analyst, 18:34Z) → 274.2%
 (Researcher, 19:04Z); the formula-internal link held in every snapshot (274.19≈274.2 etc.).
 (b) **dYdX data behavior** (preview rates, rolling windows), gateway correctly reflects the
 source. (c) **Low**: a documentation warning is sufficient. Repro: `/tmp/mec34/07..09-*.json`.
@@ -125,15 +125,15 @@ source. (c) **Low**: a documentation warning is sufficient. Repro: `/tmp/mec34/0
 **Recompute (Analyst, phase 1).** `list_markets` serves 296 markets (pre-v0.2.4 deploy; repo
 v0.2.4 filters FINAL_SETTLEMENT → 99). `latest_events` ts has no timezone marker
 (`2026-09-02 18:20:51`, sqlite UTC) while `trader_profile` windows use ISO-Z. BTC/ETH
-`nextFundingRate_pct_1h` printed as `-0.00018`/`0.0` — the −0.0 float artifact from MEC-30 still
+`nextFundingRate_pct_1h` printed as `-0.00018`/`0.0` — the −0.0 float artifact from review still
 visible in live output.
 
-**Researcher verdict (MEC-35).** (a) Reproduces: mixed ts formats confirmed by a live call; −0.0
-visible in the Analyst records; 296 markets is the known deploy lag from MEC-30. (b) **Deploy lag
+**Researcher verdict (review).** (a) Reproduces: mixed ts formats confirmed by a live call; −0.0
+visible in the Analyst records; 296 markets is the known deploy lag from review. (b) **Deploy lag
 and gateway cosmetics**, not data. (c) **Low**: no effect on calculations; resolved by deploying
 v0.2.4 plus targeted `_fmt`/ts cleanup.
 
-## Findings fixable in code (decision for TechLead/owner — NO code edits made)
+## Findings fixable in code (decision for maintainers — NO code edits made)
 
 Priority order; all are display/output-layer changes, no engine math touched:
 

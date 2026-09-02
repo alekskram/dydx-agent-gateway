@@ -1,6 +1,6 @@
 # Changelog
 
-## v0.2.5 (2026-09-02) — logical-QA fixes (MEC-41/43, findings A1-A4)
+## v0.2.5 (2026-09-02) — logical-QA fixes (review/43, findings A1-A4)
 - A2 (bug, Medium): adaptive price precision in `suggest_stops` /
   `market_ta` via `_fmt_price` — at least 6 significant digits (never fewer
   decimals than before), so level geometry (SL < entry < TP) and ATR
@@ -11,14 +11,14 @@
   deposit-adjusted curve's running peak at the worst drawdown is near zero
   (< $1 or < 1% of current equity) — the peak-relative
   `max_drawdown_pct` exceeds 100% there and misleads (t3 case: 2711.54%);
-  thresholds per Researcher (MEC-44).
+  thresholds per Researcher (review).
 - A1/A4 (docs): README "Data notes" — indicators recompute per candle
   window; `nextFundingRate` is an exchange preview, `volume24H` a rolling
   window.
 - Version bump 0.2.4 -> 0.2.5 (pyproject, FastMCP server, server.json).
 
-## v0.2.4 (2026-09-02) — pre-publication hardening (MEC-26)
-- Crash fixes (found in the MEC-21 guild review, each with a regression test):
+## v0.2.4 (2026-09-02) — pre-publication hardening (review)
+- Crash fixes (found in the review internal review, each with a regression test):
   pnl_engine.compute no longer raises on None equity/totalPnl/netTransfers
   fields (API nulls) or on a single history point (ZeroDivisionError in the
   summary line); market_digest/leaderboard summaries no longer raise
@@ -33,7 +33,7 @@
   registryType + transport{stdio} in the package, repository block added,
   $schema URL fixed (old raw.githubusercontent URL was 404).
 - Demo numbers in README dated "as of 2026-08" (kept, not scrubbed,
-  per owner decision).
+  by design decision).
 - Version bump 0.2.3 -> 0.2.4 (pyproject, FastMCP server, SKILL.md).
 
 ## v0.2.1 (2026-08-25) — QA pass: full review and testing

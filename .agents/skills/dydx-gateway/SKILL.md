@@ -54,6 +54,3 @@ is noise.
 ## Where to look next
 
 - Reports: `reports/` (monthly data-quality watchdog, digests)
-- Roadmap: the "Roadmap" section in README.md
-- Do not confuse with the xtrading bot (BingX) — a separate project of
-  the owner.

@@ -80,11 +80,6 @@ All tools are read-only and keyless. The gateway signs nothing and holds no cred
 - **Rate limits?** Public endpoints, no auth; a 60s markets cache keeps you polite.
 - **How do I verify a trader before copying them?** `trader_profile` → `trader_pnl_stats` → `fills_review` — check the identity residual and maker/taker mix first.
 
-## Roadmap
-
-- PyPI release (today: install from git).
-- Hosted HTTP behind TLS + auth token (`deploy-public.md`).
-- Farmer-heuristic calibration for the copy-trade abuse flag (`reports/qa-report.md`).
 
 ## License
 

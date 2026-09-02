@@ -1,11 +1,11 @@
-"""MEC-43 (v0.2.5) regressions for the logical-QA findings:
+"""review (v0.2.5) regressions for the logical-QA findings:
 
 - A2: suggest_stops / market_ta printed prices broke level geometry and ATR
   multipliers for sub-cent assets (DOGE entry rounded to 0.08 while SL printed
   0.0807 — impossible for a LONG; qa-logic.md A2).
 - A3: trader_pnl_stats maxDD — peak-relative pct misleads when the
   deposit-adjusted curve's running peak at the worst drawdown is near zero
-  (t3: 2711.54%); needs max_drawdown_usd + dd_pct_unreliable (MEC-44 spec).
+  (t3: 2711.54%); needs max_drawdown_usd + dd_pct_unreliable (review spec).
 
 Mocks follow tests/test_server.py (srv.api monkeypatch). PnL rows are
 newest-first (the indexer convention), as in test_regressions.py."""
@@ -106,7 +106,7 @@ def _row(day, eq, pnl, ntr="0"):
 
 
 def test_a3_maxdd_usd_and_flag_t3(monkeypatch=None):
-    """t3 shape (qa-logic.md A3 / MEC-44): deposit-adjusted running peak
+    """t3 shape (qa-logic.md A3 / review): deposit-adjusted running peak
     ~$744, deep negative trough, current equity ~$142k -> pct in the
     2711%-class (live t3 figure: 2711.54), max_drawdown_usd present,
     dd_pct_unreliable True via the <1%-of-equity branch ($744 < $1,422).
@@ -124,7 +124,7 @@ def test_a3_maxdd_usd_and_flag_t3(monkeypatch=None):
 
 
 def test_a3_flag_first_branch_tiny_peak():
-    """MEC-44 case: running peak $0.50 (< $1 branch) with current equity
+    """review case: running peak $0.50 (< $1 branch) with current equity
     $40; the 1%-of-equity branch alone would need peak < $0.40, so this
     isolates the near-zero-peak branch."""
     rows = [

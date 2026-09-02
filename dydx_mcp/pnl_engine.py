@@ -10,7 +10,7 @@ from . import api
 
 # A3 (v0.2.5): max_drawdown_pct is peak-relative and misleads when the
 # deposit-adjusted curve's running peak at the worst drawdown is near zero
-# (can exceed 100%). Thresholds per Researcher (MEC-44): peak < $1 OR
+# (can exceed 100%). Thresholds per Researcher (review): peak < $1 OR
 # peak < 1% of current equity -> dd_pct_unreliable: true; the USD depth
 # (max_drawdown_usd) is always the trustworthy figure.
 DD_UNRELIABLE_PEAK_USD = 1.0

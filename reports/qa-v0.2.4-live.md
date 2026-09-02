@@ -1,13 +1,13 @@
 # Live-QA v0.2.4 — 18 tools, PnL identity, detectors
 
-Date: 2026-09-02 · Author: Analyst (MEC-30) · Gateway: http://127.0.0.1:8901/mcp
+Date: 2026-09-02 · Author: Analyst (review) · Gateway: http://127.0.0.1:8901/mcp
 (Streamable HTTP, session init) · Rule: exactly one live call per tool.
 
 Deploy note: the live service on 8901 still runs pre-v0.2.4 code
 (`list_markets` returns 296 markets = 197 FINAL_SETTLEMENT still present;
 repo v0.2.4 code serves 99). v0.2.4 logic (ACTIVE filter, NULL policy) was
 verified offline on repo code over live indexer data — no second online pass.
-Deploy refresh is an owner decision (see closing questions).
+Live deploy may lag the repo until the next systemd restart.
 
 ## 1. Tools: 18/18 ok, 0 errors
 
@@ -118,18 +118,3 @@ signals (ZEC liq, BTC/ETH OI, equity jumps) pass through.
 
 README example note: `oi_now` in oi-event payloads is in contract units
 (BTC 202.24 = 202 BTC), not USD (USD equivalent nearby: BTC OI ≈ $15.6M).
-
-## 5. Anomalies & questions for the owner
-
-1. Live deploy on 8901 = pre-v0.2.4 (296 markets; 130/200 zero-vol rows in
-   list_markets). Repo v0.2.4 code verified offline over live data. Question:
-   refresh the deploy now (owner decides; README may note "live deploy lags repo").
-2. Cosmetic: list_markets/funding_heatmap can emit `-0.0` in
-   nextFundingRate_pct_1h (float artifact of _fmt). Fix or accept? Trivial, not a blocker.
-3. digest `oi_now` is in contract units — add `oi_usd` to oi-event payloads?
-4. equity_jump does not distinguish withdrawal/loss (known caveat) — keep as is?
-
-Confidence: high for the tool table and PnL identity (direct live calls +
-independent recomputation from raw indexer data, payload match exact); medium
-for the detector section (one time window, quiet tape — funding detector had
-no events; sensitivity confirmed via the window's recorded liq/oi/equity events).
