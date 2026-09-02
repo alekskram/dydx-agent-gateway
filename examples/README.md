@@ -39,9 +39,8 @@ Claude Desktop: `claude-desktop/config.json` (заменить пути на с�
 `webhook-receiver.py` — приёмник вебхуков (чистый stdlib);
 `alerts.env.example` — токен Telegram и адреса вебхуков для systemd-юнитов.
 
-## Торговля (когда понадобится)
+## Торговля
 
-Инструменты `place_order` / `cancel_all` / `my_positions` требуют
-пользовательских ключей (env DYDX_ETH_KEY) и явного подтверждения человека
-— см. dydx_mcp/signer.py и demos/demo3_order_consent.py. Ключи не покидают
-машину, где запущен шлюз.
+Начиная с v0.2.3 торговые инструменты из MCP-шлюза убраны (analytics-only
+by design). Офлайн-протестированный EIP-712 подписыватель остаётся
+библиотекой в `dydx_mcp/signer.py` для тех, кто строит свой слой исполнения.

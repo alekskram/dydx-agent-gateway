@@ -3,7 +3,7 @@
 > English version: [README.md](README.md). Этот файл — русская версия документации.
 
 MCP-сервер: любой ИИ-агент подключается к dYdX v4 — рыночные данные,
-аналитика трейдеров, (опционально) торговля с ключами пользователя.
+аналитика трейдеров. Только аналитика by design — без торговли и ключей.
 
 ## Установка (для чужих машин)
 
@@ -69,7 +69,7 @@ Claude Desktop (`claude_desktop_config.json`):
 }
 ```
 
-## Инструменты (21)
+## Инструменты (18, все read-only и без ключей)
 
 Публичные (без ключей):
 - `list_markets(limit, sort)` — рынки: цена, объём 24ч, OI, фандинг
@@ -93,7 +93,6 @@ Claude Desktop (`claude_desktop_config.json`):
   oi_spike_no_price / equity_jump (шина событий в sqlite)
 - `height` — высота цепи (liveness)
 
-Торговые (signer готов, подача после тестнета): `place_order`, `cancel_all`,
 `my_positions`.
 
 ## Автоматика (systemd)

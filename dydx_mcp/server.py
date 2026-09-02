@@ -349,39 +349,11 @@ def fills_review(address: str, subaccount: int = 0, limit: int = 100) -> dict:
     }
 
 
-# ------------------------------------------------------------------- trading
-
-_TRADING_HELP = (
-    "Trading tools are not active. Install the official dYdX v4 Python "
-    "client (v4-client-py) and set DYDX_MNEMONIC (and optionally DYDX_API_"
-    " credentials) in the environment. Keys stay on this host."
-)
-
-
-def _client():
-    try:
-        from dydx_v4_client.client import Client  # type: ignore
-        from dydx_v4_client.wallet import Wallet  # type: ignore
-    except Exception as e:  # noqa: BLE001 - informative failure for agents
-        raise RuntimeError(_TRADING_HELP + f" (import failed: {e})")
-    raise RuntimeError("client wiring pending: see PLAN.md week-3 milestone")
-
-
-def place_order(ticker: str, side: str, order_type: str, size: float,
-                price: float | None = None, client_id: int | None = None) -> dict:
-    """Place an order on dYdX v4 using the USER'S OWN credentials.
-    Human confirmation is expected before an agent calls this."""
-    return _client()  # pragma: no cover - wiring lands in week 3
-
-
-def cancel_all(ticker: str | None = None) -> dict:
-    """Cancel all open orders (optionally for one market)."""
-    return _client()  # pragma: no cover
-
-
-def my_positions() -> dict:
-    """Current open positions of the configured account."""
-    return _client()  # pragma: no cover
+# ------------------------------------------------------- trading (removed)
+# v0.2.3: analytics-only by design — trading tools (place_order /
+# cancel_all / my_positions) were removed from the public gateway.
+# The offline-tested EIP-712 signer remains in dydx_mcp/signer.py
+# as a library for anyone building their own execution layer.
 
 
 # ------------------------------------------------------------------ MCP wire
@@ -441,10 +413,6 @@ def build_server():
     mcp.tool(latest_events, annotations=RO_IDEM)
     mcp.tool(market_digest, annotations=RO_IDEM)
     mcp.tool(usage_stats, annotations=RO_IDEM)
-    mcp.tool(place_order, annotations={"readOnlyHint": False})
-    mcp.tool(cancel_all, annotations={"readOnlyHint": False,
-                                      "destructiveHint": True})
-    mcp.tool(my_positions, annotations=RO)
     return mcp
 
 

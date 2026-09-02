@@ -49,3 +49,11 @@
 - recent_traders → list_traders (различимость SEP-986 от recent_trades)
 - server.json для официального MCP-реестра (reverse-DNS, черновик)
 - deploy-public.md: origin/host-валидация, OAuth 2.1 заметка
+
+## v0.2.3 — analytics-only release
+- Trading tools (place_order / cancel_all / my_positions) removed from the
+  MCP server by design decision: the public gateway is read-only analytics,
+  holds no keys, signs nothing. Signer stays as a library module (offline
+  selftest 12/12), unwired to any tool.
+- demo3_order_consent.py removed; docs (EN/RU README, examples, skill)
+  updated; tool count 21 -> 18.

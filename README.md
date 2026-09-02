@@ -1,6 +1,6 @@
 # dYdX Agent Gateway
 
-**One MCP server that gives any AI agent full access to dYdX v4** — market data, funding analytics, verified trader PnL, leaderboards, anomaly & liquidation-cascade detectors, and (optional) trading with user-held keys.
+**One MCP server that gives any AI agent full access to dYdX v4** — market data, funding analytics, verified trader PnL, leaderboards, and anomaly & liquidation-cascade detectors. Analytics-only by design — no trading, no keys.
 
 No dashboards to babysit: your agent *calls* the tools — Claude, Codex, Cursor, Hermes, ZCode or any MCP client.
 
@@ -31,7 +31,7 @@ dydx-agent-gateway --http --port 8901
 
 Deps: `fastmcp`, `pycryptodome`, `ecdsa` — installed automatically. Verified with a clean-venv `pip install .`; market/trader tools work out of the box, no keys required.
 
-## Tools (21, annotations-compliant)
+## Tools (18, annotations-compliant — all read-only, keyless)
 
 **Market data** — `list_markets`, `market_detail` (honest 24h change computed from candles), `candles` (OHLCV+OI, 1MIN…1DAY), `recent_trades`, `height` (chain liveness).
 
@@ -43,7 +43,6 @@ Deps: `fastmcp`, `pycryptodome`, `ecdsa` — installed automatically. Verified w
 
 **Anomaly detection** — `latest_events`: `funding_extreme`, `oi_spike_no_price`, `equity_jump`, plus a signature **liquidation-cascade detector** (|Δprice|↑ + OI↓, fresh/confirmed stages). Live catches include ETH +15.8%/h with OI −51.6% (mass short squeeze) and 19%-OI builds with flat price.
 
-**Trading (opt-in)** — `place_order`, `cancel_all`, `my_positions`. Off by default: requires the user's `DYDX_ETH_KEY`, explicit human consent per order, dry-run planning first. Keys never leave the host; nothing is logged.
 
 ## Highlights
 
@@ -61,7 +60,7 @@ Deps: `fastmcp`, `pycryptodome`, `ecdsa` — installed automatically. Verified w
 
 ## Safety model
 
-Read tools are keyless and safe. Trading tools are disabled unless `DYDX_ETH_KEY` is set; orders require explicit confirmation; a dry-run plan (ATR risk, RR) is always produced first. Alerts credentials live in a gitignored `alerts.env` (see `examples/alerts.env.example`).
+All tools are read-only and keyless: the gateway holds no keys, signs nothing, and cannot move funds. (An offline-tested EIP-712 signer remains in `dydx_mcp/signer.py` as a library for anyone building their own execution layer — it is not wired to any MCP tool.) Alerts credentials live in a gitignored `alerts.env` (see `examples/alerts.env.example`).
 
 ## License
 

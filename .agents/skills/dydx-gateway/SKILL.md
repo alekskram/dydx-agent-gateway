@@ -23,7 +23,7 @@ metadata:
 детекторы каждые 5 мин (`dydx-detectors.timer`), лидерборд каждые 6 ч
 (`dydx-leaderboard.timer`), watchdog-отчёт 1-го числа.
 
-## Инструменты MCP (21)
+## Инструменты MCP (18)
 
 Данные: `list_markets`, `market_detail`, `candles`, `recent_trades`, `height`
 · Аналитика: `funding_heatmap(min_oi_usd)`, `market_ta`, `suggest_stops`,
@@ -31,7 +31,6 @@ metadata:
 · Обнаружение: `market_digest` (брифинг одной командой — начинать с него),
 `leaderboard`, `discover_traders`, `list_traders`, `registry_stats`,
 `latest_events`, `usage_stats`
-· Торговля: `place_order`, `cancel_all`, `my_positions` — требуют
 DYDX_ETH_KEY пользователя и явного подтверждения человека (ключи не
 покидают хост; причины — см. signer в репо).
 
