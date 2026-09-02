@@ -27,7 +27,7 @@ claude mcp add dydx -- uvx --from git+REPO_URL dydx-agent-gateway
 **Hosted вариант:** `dydx-agent-gateway --http --port 8901`, затем в любом
 клиенте `{"mcpServers": {"dydx": {"type": "http", "url": "http://host:8901/mcp"}}}`.
 
-**ZCode/Claude Code скилл:** скопировать `skills/dydx-gateway/` в
+**ZCode/Claude Code скилл:** скопировать `.agents/skills/dydx-gateway/` в
 `~/.zcode/skills/` (или `.claude/skills/`) — агент получает инструкцию
 по инструментам и всем известным API-граблям.
 
@@ -38,16 +38,7 @@ uvx --from git+REPO_URL python -c "..."   # или: pip install git+REPO_URL
 
 Зависимости: fastmcp, pycryptodome, ecdsa (ставятся сами). Ровно
 `pip install .` в чистом venv проверен: market/trader-инструменты работают
-сразу; блочный сканер/реестр/детекторы — репо-экстры (systemd-юниты в
-`deploy/`).
-
-## Установка
-
-```bash
-pip install fastmcp          # MCP-фреймворк
-# опционально, для торговых инструментов:
-# pip install v4-client-py   # официальный клиент dYdX (торговля)
-```
+сразу.
 
 ## Запуск (stdio, для Claude Desktop / Codex / любого MCP-клиента)
 
@@ -89,11 +80,13 @@ Claude Desktop (`claude_desktop_config.json`):
   трейдеры с цепи (реестр + проба equity) — стартовая точка для анализа
 - `leaderboard(limit, metric)` — верифицированный топ трейдеров (батч
   каждые 6ч: реестр + PnL-движок + флаги фармеров, эвристика v0)
+- `market_digest()` — брифинг одной командой: события + экстрим-фандинг +
+  топ лидерборда (начинать с него)
+- `usage_stats()` — счётчики вызовов инструментов с момента развёртывания
 - `latest_events(limit, kind?)` — события детекторов: funding_extreme /
-  oi_spike_no_price / equity_jump (шина событий в sqlite)
+  oi_spike_no_price / equity_jump / liq_cascade_signature (шина событий
+  в sqlite)
 - `height` — высота цепи (liveness)
-
-`my_positions`.
 
 ## Автоматика (systemd)
 
@@ -136,12 +129,11 @@ Claude Desktop (`claude_desktop_config.json`):
 (Order / ApiCredentials; domain `dydx`/1/1337) + secp256k1 RFC6979 с
 recovery-id + bech32 (dydx1…) + квантизация ордеров из живой меты рынка
 (size → base-quantums кратно stepBaseQuantums; price → subticks через
-tickSize/subticksPerTick). Самотест: 10/10 PASS (вектора keccak, рекавери
-раунд-трип, low-S, packing, bech32 раунд-трип реального адреса, кванты).
-Ключ: env DYDX_ETH_KEY (hex) — только от пользователя, не логируется.
-`python -m dydx_mcp.signer --selftest | --ticker ETH-USD --side BUY --size 0.05 --dry`
-Живая подача — после тестнет-фосета (Discord dYdX): создать API-ключи
-(EIP-712 ApiCredentials → POST /v4/api-keys) и HMAC-подпись запросов.
+tickSize/subticksPerTick). Самотест: 12/12 PASS (вектора keccak, рекавери
+раунд-трип, low-S, packing, bech32 раунд-трип реального адреса, кванты):
+`python -m dydx_mcp.signer --selftest`. Подписыватель офлайн-протестирован
+и не подключён ни к одному MCP-инструменту — библиотека для тех, кто строит
+свой слой исполнения.
 
 ## PnL-движок (`dydx_mcp/pnl_engine.py`)
 
@@ -158,8 +150,6 @@ avg $433/день, maxDD 11.9%.
    (≈+1284% годовых, лонги платят) — готовый алерт.
 2. `demo2_trader_check.py` — DD-карта реального маркет-мейкера: equity
    $63.5k, PnL $488k, 68 позиций, 100 филлов, maker 21%.
-3. `demo3_order_consent.py` — ордер-план с ATR-риском и гейтом согласия
-   человека (dry-run).
 
 ## Сканер (`scanner.py` + systemd `dydx-scanner.service`)
 
@@ -174,5 +164,3 @@ avg $433/день, maxDD 11.9%.
    алерт при аномалии.
 2. «Проверь трейдера перед копированием»: trader_profile по адресу из
    лидерборда — equity, позиции, динамика PnL.
-3. «Торгуй по моему правилу»: агент размещает лимитный ордер после явного
-   подтверждения человеком.

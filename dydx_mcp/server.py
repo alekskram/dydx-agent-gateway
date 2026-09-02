@@ -1,10 +1,9 @@
 """dYdX Agent Gateway — MCP server.
 
-Lets any AI agent read dYdX v4 market data & trader analytics, and (when the
-user provides their own wallet key via DYDX_ETH_KEY) place and manage orders
-through our built-in zero-heavy-dep EIP-712 signer (dydx_mcp/signer.py).
-Keys never leave the host running this server; live submission requires
-explicit human consent (see demos/demo3_order_consent.py).
+Analytics-only by design: lets any AI agent read dYdX v4 market data &
+trader analytics. All tools are read-only and keyless. The zero-heavy-dep
+EIP-712 signer (dydx_mcp/signer.py) remains an unwired offline-tested
+library — it is not exposed as an MCP tool.
 """
 from . import api
 
@@ -375,7 +374,7 @@ def build_server():
 
     mcp = FastMCP(
         "dydx-agent-gateway",
-        version="0.2.0",
+        version="0.2.3",
         instructions=(
             "Start with market_digest for a briefing (events + funding extremes "
             "+ leaderboard). To evaluate a trader: trader_profile then "

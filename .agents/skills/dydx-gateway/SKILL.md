@@ -4,7 +4,7 @@ description: dYdX v4 perps via local MCP gateway — market data, funding heatma
 when_to_use: Использовать при любых вопросах про dYdX — рынки, цены, фандинг, OI, объёмы; аномалии (всплески OI без цены, каскады ликвидаций, экстрим-фандинг, прыжки equity трейдеров); анализ трейдера по адресу (equity, PnL-кривая, day-винрейт, maxDD, флаг фармера) перед копированием; лидерборд и скрининг трейдеров с цепи; TA и ATR-планы стопов. Триггер-слова: dYdX, перпы, funding, OI anomaly, trader PnL, проверь трейдера, liquidation cascade.
 metadata:
   author: ventures
-  version: "0.2.0"
+  version: "0.2.3"
   agent:
     requires:
       bins: ["python3"]
@@ -14,10 +14,9 @@ metadata:
 
 Шлюз развёрнут на этом хосте, endpoint **http://127.0.0.1:8901/mcp**
 (streamable HTTP, systemd-юнит `dydx-mcp.service`; проверить:
-`systemctl is-active dydx-mcp`). Код и репо-копия этого скилла:
-`/root/ventures/dydx-grant/agent-gateway` (источник скилла —
-`.agents/skills/dydx-gateway/`; после правок там скопировать в
-`~/.zcode/skills/dydx-gateway/`).
+`systemctl is-active dydx-mcp`). Код — в корне репозитория
+(источник скилла — `.agents/skills/dydx-gateway/`; после правок
+скопировать в `~/.zcode/skills/dydx-gateway/`).
 
 Фоновые данные: сканер блоков (`dydx-scanner`, реестр адресов растёт),
 детекторы каждые 5 мин (`dydx-detectors.timer`), лидерборд каждые 6 ч
@@ -31,16 +30,14 @@ metadata:
 · Обнаружение: `market_digest` (брифинг одной командой — начинать с него),
 `leaderboard`, `discover_traders`, `list_traders`, `registry_stats`,
 `latest_events`, `usage_stats`
-DYDX_ETH_KEY пользователя и явного подтверждения человека (ключи не
-покидают хост; причины — см. signer в репо).
 
 ## Быстрый путь без MCP-клиента
 
 ```bash
-cd /root/ventures/dydx-grant/agent-gateway && .venv/bin/python -c "
+cd <корень репозитория> && python -c "
 import sys; sys.path.insert(0,'.')
 from dydx_mcp import server as s
-import json; print(json.dumps(s.market_digest(), indent=1)[:800])"
+import json; print(json.dumps(s.market_digest(), indent=1, default=str)[:800])"
 ```
 
 Полноценные подключения (stdio / конфиги Claude Desktop, Codex, Cursor):
@@ -56,5 +53,5 @@ OI ≥ $100k — шум.
 ## Куда смотреть ещё
 
 - Отчёты: `reports/` (data-quality watchdog помесячно, дайджесты)
-- Дорожная карта: `/root/ventures/ROADMAP.md`
+- Дорожная карта: секция «Roadmap» в README.md
 - Не путать с xtrading-ботом (BingX) — отдельный проект пользователя.

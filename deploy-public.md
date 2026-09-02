@@ -41,8 +41,8 @@
   (`custom_route`), пригоден для Cloudflare health checks и мониторинга.
 - Для человеческих страниц (будущий лидерборд) — Cloudflare Access (email
   OTP) бесплатен до 50 пользователей.
-- Для агентского MCP-URL: read-only инструменты могут работать без auth
-  (торговые без ключей пассивны); при включении чувствительных функций —
+- Для агентского MCP-URL: read-only инструменты могут работать без auth;
+  при включении чувствительных функций —
   Service Token через Access или OAuth 2.1 resource server по спеке
   (RFC 9728 metadata + WWW-Authenticate на 401).
 - Cloudflare скрывает IP сервера; rate-limit правилом 100 req/10s/IP на

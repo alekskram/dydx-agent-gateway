@@ -11,10 +11,10 @@
 | Cursor | `cursor/mcp.json` | положить в .cursor/mcp.json |
 
 После подключения у агента появляются инструменты: `list_markets`,
-`market_detail`, `candles`, `funding_heatmap`, `market_ta`, `suggest_stops`,
-`trader_profile`, `trader_pnl_stats`, `fills_review`, `leaderboard`,
-`discover_traders`, `recent_traders`, `registry_stats`, `latest_events`,
-`height` (+ торговые после настройки ключей).
+`market_detail`, `candles`, `recent_trades`, `funding_heatmap`, `market_ta`,
+`suggest_stops`, `trader_profile`, `trader_pnl_stats`, `fills_review`,
+`leaderboard`, `discover_traders`, `list_traders`, `registry_stats`,
+`latest_events`, `market_digest`, `usage_stats`, `height`.
 
 Примеры промптов для агента:
 - «Покажи самые экстремальные фандинги на dYdX с OI от $100k»
