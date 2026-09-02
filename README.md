@@ -27,8 +27,13 @@ command = "uvx"
 args = ["--from", "git+https://github.com/alekskram/dydx-agent-gateway", "dydx-agent-gateway"]
 ```
 
-**ZCode** — copy the agent skill into place, the gateway registers itself:
+**ZCode** — two parts: register the MCP server + copy the agent skill.
 ```bash
+# 1) register the server in ~/.zcode/cli/config.json  (workspace .zcode/config.json also works)
+#    "mcp": {"servers": {"dydx": {"type": "http", "url": "http://127.0.0.1:8901/mcp"}}}
+#    (or point it at a local stdio process instead of the hosted form)
+
+# 2) copy the skill (tool guide + data gotchas) next to it
 git clone https://github.com/alekskram/dydx-agent-gateway /tmp/dag
 cp -r /tmp/dag/.agents/skills/dydx-gateway ~/.zcode/skills/
 ```
