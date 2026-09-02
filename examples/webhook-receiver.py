@@ -25,7 +25,7 @@ class H(BaseHTTPRequestHandler):
         self.send_response(200)
         self.end_headers()
 
-    def log_message(self, *a):  # тише в консоли
+    def log_message(self, *a):  # keep the console quiet
         pass
 
 

@@ -1,31 +1,33 @@
-# dYdX indexer API — задокументированные грабли (найдены нашим watchdog)
+# dYdX indexer API — documented gotchas (found by our watchdog)
 
-Пять неочевидных особенностей indexer.dydx.trade, из-за которых наивные
-клиенты врут (каждая поймана на живых данных и покрыта тестами шлюза):
+Five non-obvious behaviors of indexer.dydx.trade that make naive
+clients lie (each caught on live data and covered by gateway tests):
 
-1. **Свечи и historical-pnl приходят newest-first** (новые первыми).
-   Потребитель, ожидающий хронологию, инвертирует знак ΔOI/Δцены и
-   тренд TA. Наш api-слой нормализует (сортировка по startedAt).
-   Пример урона: сигнал «OI сжался −8.9%» был на деле ростом +9.7%.
+1. **Candles and historical-pnl arrive newest-first** (newest entries
+   first). A consumer expecting chronology inverts the sign of
+   ΔOI/Δprice and the TA trend. Our API layer normalizes this (sorting
+   by startedAt). Example damage: a signal reading "OI shrank −8.9%"
+   was in fact +9.7% growth.
 
-2. **`netTransfers` в historical-pnl — поток за период между точками,
-   НЕ кумулятив.** Нужна бегущая сумма. Без неё депозит-скорректированная
-   просадка эталонного маркет-мейкера выглядит 79.5% вместо реальных 11.9%
-   (Δ 67 п.п. фантома).
+2. **`netTransfers` in historical-pnl is a flow for the period between
+   points, NOT cumulative.** A running sum is required. Without it, the
+   deposit-adjusted drawdown of a reference market maker looks like
+   79.5% instead of the real 11.9% (a 67 pp phantom gap).
 
-3. **`priceChange24H` в perpetualMarkets не соответствует изменению цены
-   за 24ч** (проверено по свечам ETH/BTC). Считать самостоятельно:
-   close[-1]/close[-25] по 1H-свечам.
+3. **`priceChange24H` in perpetualMarkets does not match the actual 24h
+   price change** (verified against ETH/BTC candles). Compute it
+   yourself: close[-1]/close[-25] over 1H candles.
 
-4. **Поле субтиков цены называется `subticksPerTick`** (а не
+4. **The price subticks field is called `subticksPerTick`** (not
    subticksPerBase): price_subticks = price / tickSize × subticksPerTick.
-   Для ETH (tick 0.1, spt 100000) — price×10^6.
+   For ETH (tick 0.1, spt 100000) — price×10^6.
 
-5. **Публичного фида ликвидаций нет** (несколько путей — 404). Каскады
-   ловятся сигнатурой по свечам: |Δцены|↑ одновременно с OI↓
-   (2 стадии: fresh_2h по 5-мин свечам, confirmed_6h по часовым).
+5. **There is no public liquidations feed** (several candidate paths
+   return 404). Cascades are caught by a candle signature: |Δprice|↑
+   together with OI↓ (2 stages: fresh_2h on 5-min candles,
+   confirmed_6h on hourly).
 
-Плюс: **экстремальный фандинг на рынках с OI < $100k — шум**
-(пример: CRO «+2967% годовых» при OI $4.5k). Всегда фильтровать по OI.
+Plus: **extreme funding on markets with OI < $100k is noise**
+(example: CRO "+2967% annualized" at $4.5k OI). Always filter by OI.
 
-Актуальная версия: reports/data-quality-YYYY-MM.md в репо шлюза.
+Current version: reports/data-quality-YYYY-MM.md in the gateway repo.

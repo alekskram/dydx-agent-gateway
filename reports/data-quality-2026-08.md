@@ -1,21 +1,28 @@
 # dYdX Data-Quality Watchdog — 2026-08
 
-Период: 2026-08-25T06:12:00+00:00 · генератор: watchdog.py (авто, таймер 1-го числа)
+Period: 2026-08-25T06:12:00+00:00 · generator: watchdog.py (automatic,
+timer on the 1st of the month)
 
-## Сверка тождества PnL (equity−Δ = Δpnl + ΣnetTransfers)
+## PnL identity check (equity−Δ = Δpnl + ΣnetTransfers)
 
-- Проверено аккаунтов: 29
-- Остаток < $0.01: **29/29** · максимум: $0.0000
+- Accounts checked: 29
+- Residual < $0.01: **29/29** · maximum: $0.0000
 
-## Реестр и нагрузка
+## Registry and load
 
-- Адресов в реестре (блочный сканер): 1306
-- Вызовов инструментов с деплоя: 0
+- Addresses in the registry (block scanner): 1306
+- Tool calls since deployment: 0
 
-## Постоянные особенности indexer API
+## Persistent indexer API quirks
 
-1. `netTransfers` в historical-pnl — поток за период, НЕ кумулятив (наивная интерпретация дала бы фантомную просадку 79.5% vs реальные 11.9%).
-2. `priceChange24H` в perpetualMarkets не соответствует изменению цены по свечам — считать по свечам.
-3. Per-fill PnL в /v4/fills на мейннете отсутствует — винрейт только через кривую historical-pnl.
-4. Поле субтиков цены — `subticksPerTick` (не subticksPerBase): price_subticks = price / tickSize * subticksPerTick.
-5. /v4/candles и historical-pnl возвращают newest-first (нормализовано в api-слое шлюза). /v4/historicalFunding на мейннете — 404.
+1. `netTransfers` in historical-pnl is a per-period flow, NOT cumulative
+   (the naive interpretation would show a phantom 79.5% drawdown vs the
+   real 11.9%).
+2. `priceChange24H` in perpetualMarkets does not match the candle-derived
+   price change — compute from candles.
+3. Per-fill PnL in /v4/fills is absent on mainnet — winrate only via the
+   historical-pnl curve.
+4. The price subticks field is `subticksPerTick` (not subticksPerBase):
+   price_subticks = price / tickSize * subticksPerTick.
+5. /v4/candles and historical-pnl return newest-first (normalized in the
+   gateway API layer). /v4/historicalFunding on mainnet — 404.

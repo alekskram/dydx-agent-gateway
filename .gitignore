@@ -8,6 +8,6 @@ alerts.env
 *.log
 .coverage
 
-# внутренние документы (не для публикации)
+# internal documents (not for publication)
 PLAN.md
 BINGX-BEST.md

@@ -1,5 +1,5 @@
 {
-  "_comment": "Cursor — положить в .cursor/mcp.json проекта или в глобальные настройки.",
+  "_comment": "Cursor — put into the project's .cursor/mcp.json or into global settings.",
   "mcpServers": {
     "dydx": {
       "url": "http://127.0.0.1:8901/mcp"

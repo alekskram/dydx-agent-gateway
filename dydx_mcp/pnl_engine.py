@@ -8,6 +8,14 @@ that made previous dYdX dashboards show multi-million-dollar fantasy profits.
 """
 from . import api
 
+# A3 (v0.2.5): max_drawdown_pct is peak-relative and misleads when the
+# deposit-adjusted curve's running peak at the worst drawdown is near zero
+# (can exceed 100%). Thresholds per Researcher (MEC-44): peak < $1 OR
+# peak < 1% of current equity -> dd_pct_unreliable: true; the USD depth
+# (max_drawdown_usd) is always the trustworthy figure.
+DD_UNRELIABLE_PEAK_USD = 1.0
+DD_UNRELIABLE_EQUITY_FRAC = 0.01
+
 
 def compute(rows: list[dict]) -> dict:
     """Pure stats from historical-pnl rows (newest-first); testable offline."""
@@ -55,11 +63,14 @@ def compute(rows: list[dict]) -> dict:
 
     # max drawdown on deposit-adjusted equity (equity - cumNetTransfers)
     peak, mdd = None, 0.0
+    dd_peak, dd_usd = 0.0, 0.0        # running peak / depth at worst dd
     for p, cn in zip(points, cum_ntr):
         perf = p["equity"] - cn
         peak = perf if peak is None else max(peak, perf)
         if peak:
-            mdd = max(mdd, (peak - perf) / peak)
+            dd = (peak - perf) / peak
+            if dd > mdd:
+                mdd, dd_peak, dd_usd = dd, peak, peak - perf
 
     best = max(days, key=lambda x: x[1]) if days else None
     worst = min(days, key=lambda x: x[1]) if days else None
@@ -75,6 +86,11 @@ def compute(rows: list[dict]) -> dict:
         "avg_daily_pnl": round(mean, 2),
         "sharpe_like_daily": round(sharpe_like, 2) if sharpe_like else None,
         "max_drawdown_pct": round(mdd * 100, 2),
+        "max_drawdown_usd": round(dd_usd, 2),
+        "dd_pct_unreliable": bool(
+            mdd > 1.0
+            or dd_peak < DD_UNRELIABLE_PEAK_USD
+            or dd_peak < DD_UNRELIABLE_EQUITY_FRAC * points[-1]["equity"]),
         "best_day": best, "worst_day": worst,
         "identity_max_residual_usd": round(max_resid, 4),
         "summary": ((f"{len(days)} days, winrate {wins}/{len(days)} "

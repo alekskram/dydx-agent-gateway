@@ -5,6 +5,8 @@ trader analytics. All tools are read-only and keyless. The zero-heavy-dep
 EIP-712 signer (dydx_mcp/signer.py) remains an unwired offline-tested
 library — it is not exposed as an MCP tool.
 """
+import math
+
 from . import api
 
 
@@ -15,11 +17,33 @@ def _fmt(x, step=2):
         return x
 
 
+def _fmt_price(x, step=2):
+    """Adaptive price formatting (A2, v0.2.5): never fewer decimals than the
+    legacy `step`, but at least 6 significant digits for sub-cent assets, so
+    that level geometry (SL < entry < TP) and ATR multipliers remain readable
+    from the printed fields alone (e.g. DOGE entry 0.08148, not 0.08). The
+    digit count comes from the order of magnitude (log10), which is immune
+    to binary-float noise like 0.08078000000000001."""
+    try:
+        x = float(x)
+    except (TypeError, ValueError):
+        return x
+    if x == 0 or not math.isfinite(x):
+        return _fmt(x, step)
+    msd = math.floor(math.log10(abs(x)))   # power of ten of the leading digit
+    return _fmt(x, max(step, 5 - msd))     # 6 significant digits -> decimals
+
+
 # ---------------------------------------------------------------- public data
 
 def list_markets(limit: int = 20, sort: str = "volume") -> dict:
     """All dYdX v4 perpetual markets: oracle price, 24h volume, open interest,
-    next funding rate. Sorted by 24h USD volume by default (or 'oi')."""
+    next funding rate. Sorted by 24h USD volume by default (or 'oi').
+    Each row: ticker, oraclePrice, volume24h_USD, openInterest_USD
+    (size x oracle price) and nextFundingRate_pct_1h (pct per hour).
+    Returns {"count_total", "markets", "summary"}; only ACTIVE markets —
+    delisted/settled ones are excluded.
+    Example: list_markets(limit=20, sort="volume")"""
     ms = api.markets()
     rows = []
     for t, m in ms.items():
@@ -41,7 +65,13 @@ def list_markets(limit: int = 20, sort: str = "volume") -> dict:
 
 def market_detail(ticker: str) -> dict:
     """One perpetual market in depth: prices, 24h stats computed from candles
-    (the raw API priceChange field is unreliable), OI, funding."""
+    (the raw API priceChange field is unreliable), OI, funding.
+    Returns oraclePrice, openInterest, nextFundingRate_pct_1h (pct/hour),
+    volume24h_USD, change24h_pct_from_candles (24h pct change, computed
+    from 25 x 1h candles), trades24h, and the latest three 1h candles
+    (t/open/close/usdVolume). An unknown or delisted ticker raises an
+    error (MCP isError) — settled markets are not served.
+    Example: market_detail(ticker="BTC-USD")"""
     m = api.markets().get(ticker)
     if not m:
         # FINAL_SETTLEMENT markets are filtered by api.markets() — a missing
@@ -71,18 +101,30 @@ def market_detail(ticker: str) -> dict:
 
 def candles(ticker: str, resolution: str = "1HOUR", limit: int = 100) -> list:
     """OHLCV candles with open interest for a market.
-    resolution: 1MIN|5MIN|15MIN|30MIN|1HOUR|4HOURS|1DAY."""
+    resolution: 1MIN|5MIN|15MIN|30MIN|1HOUR|4HOURS|1DAY.
+    Each candle: startedAt, open/high/low/close (price), baseTokenVolume
+    (base-coin size), usdVolume (USD), startingOpenInterest. Rows are
+    ordered oldest -> newest (the
+    indexer sends newest-first; we normalize). limit is capped at 1000.
+    Example: candles(ticker="ETH-USD", resolution="1HOUR", limit=100)"""
     return api.candles(ticker, resolution, min(limit, 1000))
 
 
 def recent_trades(ticker: str, limit: int = 30) -> list:
-    """Latest public trades of a market (price, side, size, type, time)."""
+    """Latest public trades of a market (price, side, size, type, time).
+    Newest first; limit capped at 100. side is BUY/SELL, size in base coin.
+    Example: recent_trades(ticker="BTC-USD", limit=30)"""
     return api.market_trades(ticker, min(limit, 100))
 
 
 def trader_profile(address: str, subaccount: int = 0) -> dict:
     """Snapshot of any trader's subaccount: equity, open positions, and PnL
-    curve statistics (all-time window from up to 1000 history points)."""
+    curve statistics (all-time window from up to 1000 history points).
+    Returns equity_now / totalPnl_now / totalPnl_delta_window (USD),
+    window_start / window_end, and open_positions (market, side, size,
+    entry, unrealizedPnl in USD). Pair with trader_pnl_stats for deeper
+    statistics.
+    Example: trader_profile(address="dydx1m9hg73dtn5ku8ulmj8rjmdqh0hk7uuhawc69cn")"""
     acct = api.account(address)
     pnl = api.historical_pnl(address, subaccount)
     stats = {}
@@ -116,15 +158,27 @@ def trader_pnl_stats(address: str, subaccount: int = 0,
     """Deep PnL statistics from the equity curve: daily PnL, day-winrate,
     max drawdown (deposit-adjusted), Sharpe-like daily ratio, and the
     data-accuracy reconciliation residual (phantom-PnL detector).
-    limit: history depth in points — 1000 ≈ 42 days (default, fast),
-    5000 ≈ 7 months (slower, multi-page fetch)."""
+    Key fields: day_winrate_pct (0-100), max_drawdown_pct (pct, net of
+        deposits/withdrawals) with max_drawdown_usd (same drawdown in USD)
+        and dd_pct_unreliable (true when the deposit-adjusted peak at the
+        worst drawdown was near zero — trust the USD figure then),
+        avg_daily_pnl / best_day / worst_day (USD per
+    UTC day), sharpe_like_daily, identity_max_residual_usd (expect < $1
+    on clean data). limit: history depth in points — 1000 ≈ 42 days
+    (default, fast), 5000 ≈ 7 months (slower, multi-page fetch).
+    Example: trader_pnl_stats(address="dydx1m9hg73dtn5ku8ulmj8rjmdqh0hk7uuhawc69cn", limit=5000)"""
     from .pnl_engine import pnl_stats
     return pnl_stats(address, subaccount, max(100, min(limit, 5000)))
 
 
 def registry_stats() -> dict:
     """Live stats of our on-chain address registry (block scanner):
-    how many active addresses collected, scan height, freshness."""
+    how many active addresses collected, scan height, freshness.
+    Returns addresses_total, scanned_up_to_height (last ingested dYdX
+    block), seen_last_24h (addresses seen in the last 24h) and the sqlite
+    path. On hosts where the optional scanner has not run, returns a
+    note instead — market/trader tools still work via the public indexer.
+    Example: registry_stats()"""
     from . import registry
     return registry.stats()
 
@@ -132,7 +186,10 @@ def registry_stats() -> dict:
 def list_traders(limit: int = 10, max_hits: int = 100) -> list[dict]:
     """Recently active trader addresses from the block-scanner registry
     (high-frequency validator committers filtered out by max_hits).
-    Feed an address into trader_profile / trader_pnl_stats next."""
+    Each row: address, hits (chain appearances), first_seen / last_seen,
+    last_height. Returns [] when the registry is not built on this host.
+    Feed an address into trader_profile / trader_pnl_stats next.
+    Example: list_traders(limit=10, max_hits=100)"""
     from . import registry
     return registry.recent(limit, max_hits)
 
@@ -140,7 +197,9 @@ def list_traders(limit: int = 10, max_hits: int = 100) -> list[dict]:
 def discover_traders(limit: int = 5, min_equity: float = 100.0) -> list[dict]:
     """Screener: funded, recently active traders discovered from the chain —
     registry candidates probed for live equity. Start here, then analyze
-    each with trader_profile."""
+    each with trader_profile. Each row: address, equity (USD, >=
+    min_equity), registry_hits, last_seen.
+    Example: discover_traders(limit=5, min_equity=100.0)"""
     from . import registry
     return registry.discover(limit, min_equity)
 
@@ -148,14 +207,23 @@ def discover_traders(limit: int = 5, min_equity: float = 100.0) -> list[dict]:
 def leaderboard(limit: int = 20, metric: str = "pnl_window") -> dict:
     """Verified trader leaderboard from our registry + PnL engine
     (batch-computed). metric: pnl_window | pnl_total | equity | day_winrate.
-    Farmer flags mark likely rewards-farming bots (heuristic v0)."""
+    Farmer flags mark likely rewards-farming bots (heuristic v0).
+    Each row (USD where monetary): address, equity, pnl_total, pnl_window,
+    day_winrate (pct 0-100), max_dd (pct), maker_share, avg_fill,
+    farmer_flag (bool), identity_residual. Requires a batch run — otherwise
+    returns {"error": "no leaderboard run yet — run leaderboard.py first"}.
+    Example: leaderboard(limit=20, metric="pnl_window")"""
     from . import analytics
     return analytics.leaderboard(limit, metric)
 
 
 def latest_events(limit: int = 20, kind: str | None = None) -> list[dict]:
     """Latest anomaly events from our detectors: funding_extreme,
-    oi_spike_no_price, equity_jump. Subscribe via webhooks/Telegram (alerts)."""
+    oi_spike_no_price, equity_jump, liq_cascade_signature. Each row: ts,
+    kind, subject (ticker or address) and payload (dict of detector
+    numbers). Optional kind filter; subscribe via webhooks/Telegram
+    (alerts).
+    Example: latest_events(limit=20, kind="funding_extreme")"""
     from . import analytics
     return analytics.latest_events(limit, kind)
 
@@ -163,7 +231,11 @@ def latest_events(limit: int = 20, kind: str | None = None) -> list[dict]:
 def market_digest() -> dict:
     """One-call market briefing: latest detector events + funding extremes
     (liquid markets only) + verified leaderboard top. The daily briefing
-    an agent (or human) needs before anything else."""
+    an agent (or human) needs before anything else.
+    Returns: events (up to 5, payload flattened into each row), funding
+    (top-5 funding rows, markets with >= $100k OI) and leaderboard_top
+    (top-3 by pnl_window: address, pnl_window, equity, day_winrate).
+    Example: market_digest()"""
     heat = funding_heatmap(5, min_oi_usd=100_000.0)
     lb = leaderboard(3, "pnl_window")
     from . import analytics
@@ -193,13 +265,18 @@ def market_digest() -> dict:
 
 
 def usage_stats() -> dict:
-    """Tool-call counters since deployment (traction/uptime metrics)."""
+    """Tool-call counters since deployment (traction/uptime metrics).
+    Returns calls_total, calls_24h, calls_7d and top_tools (top-5
+    (tool, count) pairs) recorded by this gateway instance.
+    Example: usage_stats()"""
     from . import analytics
     return analytics.usage_stats()
 
 
 def height() -> dict:
-    """Current dYdX chain height and time — use for liveness checks."""
+    """Current dYdX chain height and time — use for liveness checks.
+    Returns {"height": current block number, "time": block timestamp}.
+    Example: height()"""
     return api.height()
 
 
@@ -208,7 +285,12 @@ def height() -> dict:
 def funding_heatmap(limit: int = 15, min_oi_usd: float = 10_000.0) -> dict:
     """All markets ranked by |next funding rate| (1h, annualized). Shows which
     sides pay: positive = longs pay shorts. Rows carry OI so agents can
-    ignore micro-markets; raise min_oi_usd to filter noise."""
+    ignore micro-markets; raise min_oi_usd to filter noise.
+    Each row: ticker, funding_pct_1h (pct per hour), funding_pct_annualized
+    (1h rate x 24 x 365), oi_usd, oraclePrice, and exactly one of
+    longs_pay / shorts_pay = True. Zero-rate markets and markets below
+    min_oi_usd are skipped. Returns {"count_nonzero", "top", "summary"}.
+    Example: funding_heatmap(limit=15, min_oi_usd=100000.0)"""
     ms = api.markets()
     rows = []
     for t, m in ms.items():
@@ -274,7 +356,12 @@ def _atr(candles, n=14):
 def market_ta(ticker: str, resolution: str = "1HOUR") -> dict:
     """Technical snapshot computed from dYdX candles: RSI(14), EMA20/EMA50
     trend, ATR(14) volatility, Bollinger(20,2) position. Pure local math —
-    no external TA library."""
+    no external TA library.
+    Key fields: price, trend_ema20_50 ("up"/"down"), rsi14 (0-100) and
+    rsi_zone (overbought >70 / oversold <30 / neutral), atr14 (absolute)
+    and atr_pct_of_price (pct), bollinger_pctB (0 = lower band, 1 = upper
+    band). Needs >=55 candles; returns {"error": ...} for thin markets.
+    Example: market_ta(ticker="BTC-USD", resolution="1HOUR")"""
     cnd = api.candles(ticker, resolution, 120)
     if len(cnd) < 55:
         return {"error": f"not enough candles for {ticker} {resolution}"}
@@ -293,9 +380,9 @@ def market_ta(ticker: str, resolution: str = "1HOUR") -> dict:
             "oversold" if rsi and rsi < 30 else "neutral")
     bb_s = f"{pct_b:.2f}" if pct_b is not None else "n/a"
     return {
-        "ticker": ticker, "resolution": resolution, "price": _fmt(price),
+        "ticker": ticker, "resolution": resolution, "price": _fmt_price(price),
         "trend_ema20_50": trend, "rsi14": _fmt(rsi, 1), "rsi_zone": zone,
-        "atr14": _fmt(atr, 4), "atr_pct_of_price": _fmt(atr / price * 100, 2),
+        "atr14": _fmt_price(atr, 4), "atr_pct_of_price": _fmt(atr / price * 100, 2),
         "bollinger_pctB": _fmt(pct_b, 2),
         "summary": (f"{ticker}: {trend} trend, RSI {rsi:.0f} ({zone}), "
                     f"ATR {atr / price * 100:.2f}% of price, BB%B {bb_s}"),
@@ -306,7 +393,16 @@ def suggest_stops(ticker: str, side: str, entry: float | None = None,
                   atr_mult_sl: float = 1.5, atr_mult_tp: float = 2.5,
                   resolution: str = "1HOUR") -> dict:
     """ATR-based risk plan: stop-loss, take-profit, breakeven trigger and
-    trailing level for a long/short entry. Agent-managed position helper."""
+    trailing level for a long/short entry. Agent-managed position helper.
+    Unknown ticker (no oracle price) raises an error (MCP isError);
+    returns {"error": ...} when no ATR is available (thin market).
+    All output prices are in market price units: stop_loss / take_profit
+    sit atr_mult_sl / atr_mult_tp x ATR(14) from entry (entry defaults to
+    the current oracle price); breakeven_after is the price at +1 ATR in
+    profit (then move SL to entry and trail by 1 ATR); risk_reward =
+    TP distance / SL distance. Returns {"error": ...} when no ATR is
+    available.
+    Example: suggest_stops(ticker="BTC-USD", side="LONG", atr_mult_sl=1.5)"""
     m = api.markets().get(ticker, {})
     entry = float(entry or m.get("oraclePrice") or 0)
     if not entry:
@@ -322,10 +418,10 @@ def suggest_stops(ticker: str, side: str, entry: float | None = None,
     trail = entry + d * 1.0 * atr           # then trail by 1 ATR
     rr = abs(tp - entry) / abs(entry - sl)
     return {
-        "ticker": ticker, "side": side.upper(), "entry": _fmt(entry),
-        "atr14": atr, "atr_pct": ta["atr_pct_of_price"],
-        "stop_loss": _fmt(sl, 4), "take_profit": _fmt(tp, 4),
-        "breakeven_after": _fmt(be_trigger, 4),
+        "ticker": ticker, "side": side.upper(), "entry": _fmt_price(entry),
+        "atr14": _fmt_price(atr, 4), "atr_pct": ta["atr_pct_of_price"],
+        "stop_loss": _fmt_price(sl, 4), "take_profit": _fmt_price(tp, 4),
+        "breakeven_after": _fmt_price(be_trigger, 4),
         "trail_by_atr": 1.0, "risk_reward": _fmt(rr, 2),
         "summary": (f"{side.upper()} {ticker} @ {entry:.4g}: SL {sl:.4g} / "
                     f"TP {tp:.4g} (RR {rr:.1f}), BE after ±1 ATR, then trail 1 ATR"),
@@ -335,7 +431,11 @@ def suggest_stops(ticker: str, side: str, entry: float | None = None,
 def fills_review(address: str, subaccount: int = 0, limit: int = 100) -> dict:
     """Execution review from the latest fills: maker/taker split, per-market
     distribution, traded volume, avg fill size. (Per-fill PnL is not exposed
-    by the indexer; win-rate needs the PnL-curve engine — planned.)"""
+    by the indexer; win-rate needs the PnL-curve engine — planned.)
+    Key fields: fills_sampled (count), maker_share_pct (0-100),
+    sampled_volume_USD, avg_fill_USD, top_markets (top 5 by fill count).
+    Returns {"summary": "no fills"} for accounts with no fills.
+    Example: fills_review(address="dydx1m9hg73dtn5ku8ulmj8rjmdqh0hk7uuhawc69cn")"""
     fs = api.fills(address, subaccount, limit)
     if not fs:
         return {"address": address, "summary": "no fills"}
@@ -383,7 +483,7 @@ def build_server():
 
     mcp = FastMCP(
         "dydx-agent-gateway",
-        version="0.2.4",
+        version="0.2.5",
         instructions=(
             "Start with market_digest for a briefing (events + funding extremes "
             "+ leaderboard). To evaluate a trader: trader_profile then "

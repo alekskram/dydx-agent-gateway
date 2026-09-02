@@ -1,11 +1,11 @@
-# Codex CLI — добавить в ~/.codex/config.toml
-# Локальный stdio-вариант:
+# Codex CLI — add to ~/.codex/config.toml
+# Local stdio variant:
 [mcp_servers.dydx]
 command = "/path/to/agent-gateway/.venv/bin/python"
 args = ["-m", "dydx_mcp.server"]
 cwd = "/path/to/agent-gateway"
 env = { PYTHONPATH = "/path/to/agent-gateway" }
 
-# Remote-вариант (hosted endpoint) вместо блока выше:
+# Remote variant (hosted endpoint) instead of the block above:
 # [mcp_servers.dydx]
 # url = "http://127.0.0.1:8901/mcp"

@@ -1,7 +1,7 @@
 ---
 name: dydx-gateway
 description: dYdX v4 perps via local MCP gateway — market data, funding heatmap, verified trader PnL analytics, leaderboards, OI and liquidation-cascade anomaly detection. Use when the user asks about dYdX, a perp trader by address, funding/OI anomalies, or before copy-trading.
-when_to_use: Использовать при любых вопросах про dYdX — рынки, цены, фандинг, OI, объёмы; аномалии (всплески OI без цены, каскады ликвидаций, экстрим-фандинг, прыжки equity трейдеров); анализ трейдера по адресу (equity, PnL-кривая, day-винрейт, maxDD, флаг фармера) перед копированием; лидерборд и скрининг трейдеров с цепи; TA и ATR-планы стопов. Триггер-слова: dYdX, перпы, funding, OI anomaly, trader PnL, проверь трейдера, liquidation cascade.
+when_to_use: Use for any dYdX questions — markets, prices, funding, OI, volumes; anomalies (OI spikes without price movement, liquidation cascades, extreme funding, trader equity jumps); trader analysis by address (equity, PnL curve, day-winrate, maxDD, farmer flag) before copy-trading; leaderboard and onchain trader screening; TA and ATR-based stop plans. Trigger words: dYdX, perps, funding, OI anomaly, trader PnL, vet this trader, liquidation cascade.
 metadata:
   author: ventures
   version: "0.2.4"
@@ -10,48 +10,50 @@ metadata:
       bins: ["python3"]
 ---
 
-# dYdX Agent Gateway (локальный MCP-сервер)
+# dYdX Agent Gateway (local MCP server)
 
-Шлюз развёрнут на этом хосте, endpoint **http://127.0.0.1:8901/mcp**
-(streamable HTTP, systemd-юнит `dydx-mcp.service`; проверить:
-`systemctl is-active dydx-mcp`). Код — в корне репозитория
-(источник скилла — `.agents/skills/dydx-gateway/`; после правок
-скопировать в `~/.zcode/skills/dydx-gateway/`).
+The gateway is deployed on this host, endpoint **http://127.0.0.1:8901/mcp**
+(streamable HTTP, systemd unit `dydx-mcp.service`; check with
+`systemctl is-active dydx-mcp`). The code lives at the repository root
+(the skill's source is `.agents/skills/dydx-gateway/`; after edits,
+copy it to `~/.zcode/skills/dydx-gateway/`).
 
-Фоновые данные: сканер блоков (`dydx-scanner`, реестр адресов растёт),
-детекторы каждые 5 мин (`dydx-detectors.timer`), лидерборд каждые 6 ч
-(`dydx-leaderboard.timer`), watchdog-отчёт 1-го числа.
+Background data: the block scanner (`dydx-scanner`, the address registry
+keeps growing), detectors every 5 min (`dydx-detectors.timer`),
+leaderboard every 6 h (`dydx-leaderboard.timer`), watchdog report on the
+1st of each month.
 
-## Инструменты MCP (18)
+## MCP tools (18)
 
-Данные: `list_markets`, `market_detail`, `candles`, `recent_trades`, `height`
-· Аналитика: `funding_heatmap(min_oi_usd)`, `market_ta`, `suggest_stops`,
+Data: `list_markets`, `market_detail`, `candles`, `recent_trades`, `height`
+· Analytics: `funding_heatmap(min_oi_usd)`, `market_ta`, `suggest_stops`,
 `trader_profile`, `trader_pnl_stats(limit≤5000)`, `fills_review`
-· Обнаружение: `market_digest` (брифинг одной командой — начинать с него),
+· Discovery: `market_digest` (one-call briefing — start here),
 `leaderboard`, `discover_traders`, `list_traders`, `registry_stats`,
 `latest_events`, `usage_stats`
 
-## Быстрый путь без MCP-клиента
+## Quick path without an MCP client
 
 ```bash
-cd <корень репозитория> && python -c "
+cd <repo root> && python -c "
 import sys; sys.path.insert(0,'.')
 from dydx_mcp import server as s
 import json; print(json.dumps(s.market_digest(), indent=1, default=str)[:800])"
 ```
 
-Полноценные подключения (stdio / конфиги Claude Desktop, Codex, Cursor):
-`examples/` в репо.
+Full-blown connections (stdio / Claude Desktop, Codex, Cursor configs):
+`examples/` in the repo.
 
-## Важные особенности данных
+## Important data caveats
 
-Читать `references/data-gotchas.md` (5 задокументированных граблей
-indexer API: порядок свечей, netTransfers, priceChange24H, subticksPerTick,
-отсутствие фида ликвидаций). Короткое правило: фандинг без фильтра
-OI ≥ $100k — шум.
+Read `references/data-gotchas.md` (5 documented indexer-API gotchas:
+candle ordering, netTransfers, priceChange24H, subticksPerTick, no
+liquidation feed). Rule of thumb: funding without an OI ≥ $100k filter
+is noise.
 
-## Куда смотреть ещё
+## Where to look next
 
-- Отчёты: `reports/` (data-quality watchdog помесячно, дайджесты)
-- Дорожная карта: секция «Roadmap» в README.md
-- Не путать с xtrading-ботом (BingX) — отдельный проект пользователя.
+- Reports: `reports/` (monthly data-quality watchdog, digests)
+- Roadmap: the "Roadmap" section in README.md
+- Do not confuse with the xtrading bot (BingX) — a separate project of
+  the owner.

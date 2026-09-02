@@ -1,5 +1,5 @@
 {
-  "_comment": "Claude Desktop — подключение к hosted-эндпоинту (streamable HTTP), когда шлюз уже запущен где-то как сервис. Никакой установки не нужно.",
+  "_comment": "Claude Desktop — connection to a hosted endpoint (streamable HTTP) when the gateway already runs somewhere as a service. No installation needed.",
   "mcpServers": {
     "dydx": {
       "type": "http",

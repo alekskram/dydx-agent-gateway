@@ -9,16 +9,16 @@ sys.path.insert(0, str(Path(__file__).parent))
 BASE = Path(__file__).parent
 
 GOTCHAS = [
-    "`netTransfers` в historical-pnl — поток за период, НЕ кумулятив "
-    "(наивная интерпретация дала бы фантомную просадку 79.5% vs реальные 11.9%).",
-    "`priceChange24H` в perpetualMarkets не соответствует изменению цены "
-    "по свечам — считать по свечам.",
-    "Per-fill PnL в /v4/fills на мейннете отсутствует — винрейт только "
-    "через кривую historical-pnl.",
-    "Поле субтиков цены — `subticksPerTick` (не subticksPerBase): "
+    "`netTransfers` in historical-pnl is a per-period flow, NOT cumulative "
+    "(the naive interpretation would show a phantom 79.5% drawdown vs the real 11.9%).",
+    "`priceChange24H` in perpetualMarkets does not match the candle-derived "
+    "price change — compute from candles.",
+    "Per-fill PnL in /v4/fills is absent on mainnet — winrate only via the "
+    "historical-pnl curve.",
+    "The price subticks field is `subticksPerTick` (not subticksPerBase): "
     "price_subticks = price / tickSize * subticksPerTick.",
-    "/v4/candles и historical-pnl возвращают newest-first (нормализовано "
-    "в api-слое шлюза). /v4/historicalFunding на мейннете — 404.",
+    "/v4/candles and historical-pnl return newest-first (normalized in the "
+    "gateway API layer). /v4/historicalFunding on mainnet — 404.",
 ]
 
 
@@ -36,19 +36,19 @@ def generate() -> Path:
     month = datetime.now(timezone.utc).strftime("%Y-%m")
     md = f"""# dYdX Data-Quality Watchdog — {month}
 
-Период: {run['computed_at'] if run else 'n/a'} · генератор: watchdog.py (авто, таймер 1-го числа)
+Period: {run['computed_at'] if run else 'n/a'} · generator: watchdog.py (automatic, timer on the 1st of the month)
 
-## Сверка тождества PnL (equity−Δ = Δpnl + ΣnetTransfers)
+## PnL identity check (equity−Δ = Δpnl + ΣnetTransfers)
 
-- Проверено аккаунтов: {len(rows)}
-- Остаток < $0.01: **{zero}/{len(rows)}** · максимум: ${max(res, default=0):.4f}
+- Accounts checked: {len(rows)}
+- Residual < $0.01: **{zero}/{len(rows)}** · maximum: ${max(res, default=0):.4f}
 
-## Реестр и нагрузка
+## Registry and load
 
-- Адресов в реестре (блочный сканер): {total}
-- Вызовов инструментов с деплоя: {usage}
+- Addresses in the registry (block scanner): {total}
+- Tool calls since deployment: {usage}
 
-## Постоянные особенности indexer API
+## Persistent indexer API quirks
 
 """ + "\n".join(f"{i}. {g}" for i, g in enumerate(GOTCHAS, 1)) + "\n"
     out = BASE / "reports" / f"data-quality-{month}.md"

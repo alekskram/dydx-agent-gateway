@@ -1,5 +1,5 @@
 {
-  "_comment": "Claude Desktop — локальное подключение (stdio). Положить в claude_desktop_config.json (Settings -> Developer -> Edit Config). ЗАМЕНИ path на свою папку шлюза.",
+  "_comment": "Claude Desktop — local connection (stdio). Put this into claude_desktop_config.json (Settings -> Developer -> Edit Config). REPLACE path with your gateway folder.",
   "mcpServers": {
     "dydx": {
       "command": "/path/to/agent-gateway/.venv/bin/python",

@@ -27,16 +27,16 @@ async def main():
         print(f"connected to {URL}; tools: {len(await c.list_tools())}")
 
         events = first(await c.call_tool("latest_events", {"limit": 5}))
-        print("\n== последние события детекторов ==")
+        print("\n== latest detector events ==")
         if isinstance(events, list) and events:
             for e in events:
                 print(f"  {e['kind']:20} {e['subject']:12} {str(e['payload'])[:80]}")
         else:
-            print("  (пока тихо)")
+            print("  (all quiet)")
 
         heat = first(await c.call_tool(
             "funding_heatmap", {"limit": 5, "min_oi_usd": 100000}))
-        print("\n== фандинг-хитмап (OI >= $100k) ==")
+        print("\n== funding heatmap (OI >= $100k) ==")
         print(" ", heat["summary"])
         for r in heat["top"][:3]:
             side = "LONGS PAY" if "longs_pay" in r else "SHORTS PAY"
@@ -44,13 +44,13 @@ async def main():
                   f"(ann {r['funding_pct_annualized']:+}%) OI ${r['oi_usd']:,.0f} {side}")
 
         lb = first(await c.call_tool("leaderboard", {"limit": 3}))
-        print("\n== верифицированный лидерборд (окно ~42д) ==")
+        print("\n== verified leaderboard (~42d window) ==")
         for r in lb["top"]:
             print(f"  {r['address'][:12]}… winPnL ${r['pnl_window']:>+10,.0f} | "
                   f"eq ${r['equity']:>10,.0f} | wr {r['day_winrate']}% | "
-                  f"farmer={'да' if r['farmer_flag'] else 'нет'}")
+                  f"farmer={'yes' if r['farmer_flag'] else 'no'}")
 
-        print("\n(digest готов — тот же набор агент отправит в Telegram/вебхук)")
+        print("\n(digest ready — the same set the agent would push to Telegram/webhook)")
 
 
 if __name__ == "__main__":
