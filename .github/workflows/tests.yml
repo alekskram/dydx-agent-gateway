@@ -12,9 +12,13 @@ jobs:
       matrix:
         python: ["3.11", "3.13"]
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python }}
       - run: pip install -e ".[dev]"
-      - run: pytest tests/ -q --cov=dydx_mcp --cov-report=term
+      - name: Run tests
+        run: pytest tests/ -q --cov=dydx_mcp --cov-report=term -rA --tb=short 2>&1 | tee pytest_output.txt; exit ${PIPESTATUS[0]}
+      - name: Print failure summary
+        if: failure()
+        run: tail -100 pytest_output.txt
