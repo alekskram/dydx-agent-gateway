@@ -107,9 +107,13 @@ def sortino_like(daily_pnls: list[float]) -> float | None:
 
 def periods_per_year(resolution: str) -> int:
     """Candles per year for a resolution string; unknown -> ValueError."""
+    _alias = {"1H": "1HOUR", "4H": "4HOURS", "1D": "1DAY",
+              "4HOUR": "4HOURS", "5MINS": "5MIN", "15MINS": "15MIN",
+              "30MINS": "30MIN"}
+    r = _alias.get(resolution.upper(), resolution.upper())
     table = {"1MIN": 525600, "5MIN": 105120, "15MIN": 35040,
              "30MIN": 17520, "1HOUR": 8760, "4HOURS": 2190, "1DAY": 365}
     try:
-        return table[resolution]
+        return table[r]
     except KeyError:
         raise ValueError(f"unknown resolution: {resolution!r}") from None

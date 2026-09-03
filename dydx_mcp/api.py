@@ -68,9 +68,16 @@ def markets() -> dict:
     return _MARKETS_CACHE[1]
 
 
+_RESOLUTION_ALIASES = {
+    "1MIN": "1MIN", "5MIN": "5MINS", "15MIN": "15MINS", "30MIN": "30MINS",
+    "1HOUR": "1HOUR", "1H": "1HOUR", "4HOUR": "4HOURS", "4H": "4HOURS", "4HOURS": "4HOURS",
+    "1DAY": "1DAY", "1D": "1DAY", "1WEEK": "1WEEK",
+}
+
+
 def candles(ticker: str, resolution: str = "1HOUR", limit: int = 100) -> list:
     c = get(f"candles/perpetualMarkets/{ticker}",
-            {"resolution": resolution, "limit": limit}).get("candles", [])
+            {"resolution": _RESOLUTION_ALIASES.get(resolution.upper(), resolution.upper()), "limit": limit}).get("candles", [])
     # indexer returns newest-first; normalize to chronological (oldest->newest)
     return sorted(c, key=lambda x: x["startedAt"])
 
