@@ -17,7 +17,7 @@ claude mcp add dydx -- uvx dydx-agent-gateway
 ```json
 {"mcpServers": {"dydx": {
   "command": "uvx",
-  "args": ["--from", "git+https://github.com/alekskram/dydx-agent-gateway", "dydx-agent-gateway"]}}}
+  "args": ["dydx-agent-gateway"]}}}
 ```
 
 **Codex** (`~/.codex/config.toml`):
