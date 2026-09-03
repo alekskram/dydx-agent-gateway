@@ -100,3 +100,138 @@ Five scenarios a trader faces daily — solved with single MCP calls.
 ```
 
 This is the `market_digest` of trust — one number that proves the data isn't lying.
+
+---
+
+# Analyst Workflows
+
+Six scenarios for researchers, report writers, and on-chain investigators.
+
+## A1. "I need a morning briefing in 5 minutes"
+
+**Pain:** Daily reports require 10 browser tabs, manual copy-paste, and stale screenshots.
+
+```
+→ market_digest()
+
+  EVENTS (5):
+    liq_cascade_signature  SOL-USD   ← confirmed_6h, SHORTS liquidated
+    liq_cascade_signature  BTC-USD   ← fresh_2h
+    oi_spike_no_price      ETH-USD   ← OI +10.9% while price flat
+
+  FUNDING EXTREMES: XMR, ONDO, ALGO
+  TOP TRADERS: dydx1qqeac9… PnL $2,782 | dydx1hqamt3… PnL $217
+```
+
+One call → skeleton of your daily report. Every number is timestamped and sourced from the indexer.
+
+## A2. "Someone said 'funding on XMR is crazy'. Verify before publishing."
+
+**Pain:** Fact-checking claims requires pulling historical data from multiple sources.
+
+```
+→ historical_funding("XMR-USD", limit=48)
+
+  XMR — funding over 48 hours:
+  Average: +0.0046%/1h → +40% annualized
+  Direction: LONGS paying (bullish bias)
+  
+  vs ETH benchmark: +0.0002%/1h → +1.8% annualized
+  
+  VERDICT: XMR funding is 23x more expensive than ETH. "Crazy" confirmed.
+```
+
+Every number traceable to the indexer API. No screenshots needed.
+
+## A3. "Reconstruct what happened with SOL"
+
+**Pain:** For an event report, you need the timeline: price action, OI changes, and interpretation.
+
+```
+→ candles("SOL-USD", "1HOUR", 12)
+
+  13:00  OI 56,854  ← OI starts dropping
+  14:00  price +3.3%  ← sharp move up
+  15:00  OI 48,297   ← OI down -15% from peak
+
+  TOTAL 12h: price +3.9% | OI -18.8%
+  
+  INTERPRETATION: Price ↑ + OI ↓ = SHORT SQUEEZE
+  Positions were force-closed, not new longs entering.
+```
+
+The OI-in-candles feature lets you distinguish genuine buying from forced liquidation — critical for accurate reporting.
+
+## A4. "Compare two traders' execution styles"
+
+**Pain:** Understanding WHO is a real trader vs a bot requires execution data.
+
+```
+→ fills_review(address) for two top traders
+
+  Trader #1: maker_share 0% → aggressive (market orders, momentum)
+  Trader #2: maker_share 0% → aggressive
+  
+  Both: identity_residual $0.0000 → data verified
+  Both: day_winrate 56% → similar hit rate
+```
+
+Maker/taker split reveals execution strategy. Combined with PnL identity check, you can separate genuine alpha from wash trading.
+
+## A5. "What's the market structure right now?"
+
+**Pain:** Regime detection requires cross-asset analysis that's manual and slow.
+
+```
+→ correlation + market_ta across assets
+
+  CORRELATIONS (1H, 7 days):
+    ETH↔BTC: r=0.88 (strong)   | β=+1.19
+    SOL↔BTC: r=0.77 (moderate) | β=+1.28
+    SOL↔ETH: r=0.76 (moderate) | β=+0.94
+
+  VOLATILITY (annualized):
+    BTC: 36% | ETH: 49% | SOL: 59%
+
+  BTC REGIME: short-term up (RSI 82) | long-term up (RSI 72)
+  → TRENDING MARKET (up) — high correlations, cascades likely on reversal
+```
+
+This is a market structure report in 20 seconds. High correlations + overbought RSI = elevated cascade risk.
+
+## A6. "Verify data quality before publishing"
+
+**Pain:** Your reputation depends on accuracy. One wrong number destroys credibility.
+
+```
+→ trader_pnl_stats(address) for top 3 traders
+
+  dydx1qqeac9…  residual $0.0000  ✓
+  dydx15y4tcc…  residual $0.0000  ✓
+  dydx1kajhdcm… residual $0.0000  ✓
+
+  ALL VERIFIED — safe to publish.
+  
+  Check: equity-Δ = Δpnl + ΣnetTransfers (on every account)
+```
+
+**This is unique.** No other analytics tool verifies its own data against the fundamental accounting identity. If residual ≠ 0, the platform data is wrong — and now you know before your readers do.
+
+---
+
+## Summary: 12 problems solved
+
+| # | Problem | Tool | Time |
+|---|---|---|---|
+| T1 | Verify trader claims | `leaderboard` | 3s |
+| T2 | Storm detection | `latest_events` | 3s |
+| T3 | Smart money tracking | OI spikes | 5s |
+| T4 | Portfolio risk (BTC -5%) | `correlation` × N | 20s |
+| T5 | Where to place stops | `suggest_stops` | 3s |
+| A1 | Morning briefing | `market_digest` | 3s |
+| A2 | Fact-check funding claims | `historical_funding` | 5s |
+| A3 | Reconstruct market event | `candles` + OI | 10s |
+| A4 | Compare trader styles | `fills_review` | 15s |
+| A5 | Market structure/regime | `correlation` + `market_ta` | 20s |
+| A6 | Verify data before publishing | `trader_pnl_stats` | 5s |
+| A7 | Find research subjects | `discover_traders` | 10s |
