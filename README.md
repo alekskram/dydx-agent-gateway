@@ -76,6 +76,8 @@ Requires Python ≥ 3.11. Deps (`fastmcp`, `pycryptodome`, `ecdsa`) install auto
 
 Real outputs of every tool: [`examples/tool-output.md`](examples/tool-output.md).
 
+**Solving real trader problems** — 5 scenarios with live data: [`examples/use-cases.md`](examples/use-cases.md).
+
 ## What makes it different
 
 - **Verified trader PnL.** `trader_pnl_stats` reconciles the identity `equity-Δ = Δpnl + ΣnetTransfers` on every account — residual ≠ 0 means the numbers lie. Live-checked on real accounts to $0.0000 (see `reports/qa-logic.md`). Deposit-adjusted maxDD, day-winrate, sharpe-like.
