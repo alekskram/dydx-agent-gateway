@@ -10,7 +10,7 @@ One MCP server that gives any AI agent analytics access to dYdX v4: market data,
 
 **Claude Code:**
 ```bash
-claude mcp add dydx -- uvx --from git+https://github.com/alekskram/dydx-agent-gateway dydx-agent-gateway
+claude mcp add dydx -- uvx dydx-agent-gateway
 ```
 
 **Cursor / any mcp.json:**
@@ -24,13 +24,13 @@ claude mcp add dydx -- uvx --from git+https://github.com/alekskram/dydx-agent-ga
 ```toml
 [mcp_servers.dydx]
 command = "uvx"
-args = ["--from", "git+https://github.com/alekskram/dydx-agent-gateway", "dydx-agent-gateway"]
+args = ["dydx-agent-gateway"]
 ```
 
 **ZCode** — register the MCP server and copy the agent skill (all copy-paste):
 ```bash
 # 1) start the gateway (keep it running)
-uvx --from git+https://github.com/alekskram/dydx-agent-gateway dydx-agent-gateway --http --port 8901 &
+uvx dydx-agent-gateway --http --port 8901 &
 
 # 2) register it (merges into ~/.zcode/cli/config.json; workspace .zcode/config.json works too)
 python3 - <<'PY'
@@ -52,7 +52,7 @@ echo "ZCode setup done — restart your session and call any dydx tool"
 
 **Plain Python:**
 ```bash
-pip install git+https://github.com/alekskram/dydx-agent-gateway
+pip install dydx-agent-gateway
 python -c "from dydx_mcp import server; import json; print(json.dumps(server.market_digest(), default=str)[:400])"
 ```
 
