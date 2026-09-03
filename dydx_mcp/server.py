@@ -200,6 +200,8 @@ def trader_pnl_stats(address: str, subaccount: int = 0,
     """Deep PnL statistics from the equity curve: daily PnL, day-winrate,
     max drawdown (deposit-adjusted), Sharpe-like daily ratio, and the
     data-accuracy reconciliation residual (phantom-PnL detector).
+    NOTE: pass limit as keyword: trader_pnl_stats(addr, limit=500),
+    NOT positionally (second positional arg is subaccountNumber).
     Key fields: day_winrate_pct (0-100), max_drawdown_pct (pct, net of
         deposits/withdrawals) with max_drawdown_usd (same drawdown in USD)
         and dd_pct_unreliable (true when the deposit-adjusted peak at the
