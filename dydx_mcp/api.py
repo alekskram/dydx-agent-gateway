@@ -34,14 +34,20 @@ def get(path: str, params: dict | None = None, retries: int = 3) -> dict:
             if e.code in (429, 502, 503, 504) and attempt < retries - 1:
                 time.sleep(2.0 * (attempt + 1))
                 continue
-            raise
-        except (urllib.error.URLError, TimeoutError, ConnectionError):
+            hint = ("rate limited - retry after backoff" if e.code == 429
+                    else e.reason)
+            raise ValueError(
+                f"indexer {e.code} for {url}: {hint} "
+                f"(after {retries} attempts)") from e
+        except (urllib.error.URLError, TimeoutError, ConnectionError) as e:
             # network blips/timeouts are retryable too
             if attempt < retries - 1:
                 time.sleep(2.0 * (attempt + 1))
                 continue
-            raise
-    raise RuntimeError(f"unreachable: {url}")
+            raise RuntimeError(
+                f"indexer unreachable after {retries} tries: {url} - "
+                "check network/upstream status") from e
+    raise RuntimeError(f"indexer unreachable: {url}")  # defensive: loop always exits above
 
 
 def height() -> dict:
@@ -74,7 +80,11 @@ def market_trades(ticker: str, limit: int = 50) -> list:
 
 
 def historical_funding(ticker: str, limit: int = 100) -> list:
-    return get("historicalFunding", {"ticker": ticker, "limit": limit}).get("historicalFunding", [])
+    """Newest-first 1h funding rates. The ticker rides in the PATH
+    (/v4/historicalFunding/{ticker}) — the query-parameter form 404s on
+    mainnet (MEC-50 live check)."""
+    return get(f"historicalFunding/{ticker}",
+               {"limit": limit}).get("historicalFunding", [])
 
 
 def account(address: str) -> dict:

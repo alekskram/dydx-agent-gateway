@@ -346,3 +346,111 @@ total calls  : 119
 calls in 24h : 37
 most called  : height (62), market_digest (15)
 ```
+
+---
+
+# v0.3.0 analyst pack (2026-09-03)
+
+New tools funded by the same live QA pass (`reports/qa-v0.3.0-live.md`,
+budget: 2 live calls per tool). Values are point-in-time snapshots.
+
+## historical_funding
+
+Raw 1h funding-rate history — the rates actually paid, not the next-rate
+preview. Points are oldest → newest.
+
+Call: `historical_funding(ticker="BTC-USD", limit=168)`
+
+Observed output (2026-09-03T10Z):
+
+```text
+points   : 168 (7 days, hourly)
+window   : 2026-08-27T11:00Z → 2026-09-03T10:00Z
+latest   : −3.8e-07 per 1h (−0.33% annualized)
+mean/max : mean +4e-08, max |rate| +4.5e-06
+check    : annualized = rate × 24 × 365 — verified on all 168 points
+```
+
+## raw_fills
+
+Raw execution tape: every indexer fill field (fee, position context), for
+agents doing their own execution-quality math. Addresses from
+discover_traders / leaderboard.
+
+Call: `raw_fills(address="dydx1vg8g0rkrtv35pag20u082gj8n4k7tths7ap0zm")`
+
+Observed output:
+
+```text
+fills     : 200 (newest first), all ETH-USD
+fill[0]   : SELL 0.176 @ 2402.7, MAKER/LIMIT, fee 0.042288
+            positionSide LONG, sizeBefore 34.176, entryBefore 1834.60
+usd_notional per fill = price × size — recomputed, matches
+```
+
+## cvd
+
+Cumulative volume delta from the public trades tape (+size on BUY, −size on
+SELL, base units). Returns the trade window, buy/sell volumes and the last 50
+running values.
+
+Call: `cvd(ticker="BTC-USD", trades_limit=500)`
+
+Observed output (2026-09-03T10Z):
+
+```text
+trades    : 500, window 05:00:31Z → 09:57:15Z (~5h)
+buy/sell  : 9.8147 / 3.4743 BTC → CVD +6.3404 (buy-dominated tape)
+check     : manual reverse+cumsum over the raw tape — exact match (1e-9)
+```
+
+## correlation
+
+Pearson r and beta(a|b) over log returns; candle series joined by startedAt.
+
+Call: `correlation(ticker_a="BTC-USD", ticker_b="ETH-USD")`
+
+Observed output:
+
+```text
+candles   : 168 (1HOUR, common timestamps)
+r         : 0.853   (numpy corrcoef on the same join: 0.8532)
+beta(a|b) : 0.623   (numpy cov/var: 0.6227)
+reading   : BTC moves ~0.62× ETH's log moves; tight majors pair
+```
+
+## market_ta — new fields (v0.3.0)
+
+Call: `market_ta(ticker="BTC-USD", resolution="1HOUR")`
+
+Observed output:
+
+```text
+MACD(12,26,9) : line 94.96, signal 58.10, hist +36.85 (bullish momentum)
+VWAP(20)      : 77415.55 — price traded above VWAP on the snapshot
+realized vol  : 29.22% annualized (pstdev of 1h log returns × √8760)
+checks        : MACD/VWAP/rVol recomputed by hand on the same 120 candles — exact
+```
+
+## market_detail — basis_pct (v0.3.0)
+
+Call: `market_detail(ticker="BTC-USD")`
+
+Observed output:
+
+```text
+basis_pct : −0.045 (last 1MIN close 77600.4 vs oracle 77635.18)
+reading   : mark traded 4.5 bps below oracle — negligible dislocation
+```
+
+## trader_pnl_stats — sortino_like_daily (v0.3.0)
+
+Call: `trader_pnl_stats(address="dydx1vg8g…ap0zm")`
+
+Observed output:
+
+```text
+sortino_like_daily : 0.46   (sharpe_like_daily 0.18 on the same account)
+reading            : downside deviation halves the risk denominator —
+                     this account's losses are concentrated in few days
+```

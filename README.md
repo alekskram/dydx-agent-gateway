@@ -63,13 +63,13 @@ python -c "from dydx_mcp import server; import json; print(json.dumps(server.mar
 
 Requires Python ≥ 3.11. Deps (`fastmcp`, `pycryptodome`, `ecdsa`) install automatically. See `examples/` for ready-made configs and a working autonomous agent script.
 
-## Tools (18 — read-only, keyless)
+## Tools (22 — read-only, keyless)
 
 | Group | Tools |
 |---|---|
-| Market data | `list_markets`, `market_detail`, `candles`, `recent_trades`, `height` |
-| Analytics | `funding_heatmap`, `market_ta`, `suggest_stops` |
-| Traders | `trader_profile`, `trader_pnl_stats`, `fills_review` |
+| Market data | `list_markets`, `market_detail`, `candles`, `recent_trades`, `height`, `historical_funding` |
+| Analytics | `funding_heatmap`, `market_ta`, `suggest_stops`, `cvd`, `correlation` |
+| Traders | `trader_profile`, `trader_pnl_stats`, `fills_review`, `raw_fills` |
 | Discovery | `discover_traders`, `leaderboard`, `list_traders`, `registry_stats` |
 | Signals | `latest_events` (funding extremes, OI spikes, liquidation cascades, equity jumps) |
 | Briefing | `market_digest` — one call: events + funding + leaderboard top. **Start here.** |
@@ -80,7 +80,8 @@ Real outputs of every tool: [`examples/tool-output.md`](examples/tool-output.md)
 
 - **Verified trader PnL.** `trader_pnl_stats` reconciles the identity `equity-Δ = Δpnl + ΣnetTransfers` on every account — residual ≠ 0 means the numbers lie. Live-checked on real accounts to $0.0000 (see `reports/qa-logic.md`). Deposit-adjusted maxDD, day-winrate, sharpe-like.
 - **Anomaly detectors, not dashboards.** Funding extremes, OI spikes without price, equity jumps, and a liquidation-cascade signature (|Δprice|↑ + OI↓) — the patterns that matter before they're charts. Live catches in `reports/`.
-- **Data-quality discipline.** Five documented indexer API gotchas (`.agents/skills/dydx-gateway/references/data-gotchas.md`) that silently corrupt naive analytics. 62 tests, CI on 3.11/3.13.
+- **Analyst pack.** Funding-rate history, CVD, cross-market correlation, raw fills for execution analysis; TA enrichments MACD/VWAP/realized vol; sortino-like downside risk.
+- **Data-quality discipline.** Five documented indexer API gotchas (`.agents/skills/dydx-gateway/references/data-gotchas.md`) that silently corrupt naive analytics. 129 tests, CI on 3.11/3.13.
 
 ## Data notes
 

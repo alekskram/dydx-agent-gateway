@@ -8,6 +8,8 @@ library — it is not exposed as an MCP tool.
 import math
 
 from . import api
+from . import ta_ext
+from typing import Literal
 
 
 def _fmt(x, step=2):
@@ -51,13 +53,18 @@ def _require_ticker(ticker: str) -> None:
         f"Call list_markets for the full set; examples: {sample}")
 
 
-def list_markets(limit: int = 20, sort: str = "volume") -> dict:
+def list_markets(
+    limit: int = 20,
+    sort: Literal["volume", "oi"] = "volume",
+    offset: int = 0,
+) -> dict:
     """All dYdX v4 perpetual markets: oracle price, 24h volume, open interest,
     next funding rate. Sorted by 24h USD volume by default (or 'oi').
     Each row: ticker, oraclePrice, volume24h_USD, openInterest_USD
     (size x oracle price) and nextFundingRate_pct_1h (pct per hour).
-    Returns {"count_total", "markets", "summary"}; only ACTIVE markets —
-    delisted/settled ones are excluded.
+    Returns {"count_total", "count", "offset", "has_more", "next_offset",
+    "markets", "summary"}; only ACTIVE markets — delisted/settled ones are
+    excluded. Page with offset when has_more is true.
     Example: list_markets(limit=20, sort="volume")"""
     ms = api.markets()
     rows = []
@@ -72,10 +79,18 @@ def list_markets(limit: int = 20, sort: str = "volume") -> dict:
         })
     key = "volume24h_USD" if sort == "volume" else "openInterest_USD"
     rows.sort(key=lambda r: -(r[key] or 0))
-    top = rows[:limit]
-    return {"count_total": len(rows), "markets": top,
-            "summary": f"{len(rows)} markets; top by 24h volume: "
-                       + ", ".join(r["ticker"] for r in top[:5])}
+    top = rows[max(offset, 0):max(offset, 0) + limit]
+    has_more = offset + limit < len(rows)
+    return {
+        "count_total": len(rows),
+        "count": len(top),
+        "offset": offset,
+        "has_more": has_more,
+        "next_offset": offset + limit if has_more else None,
+        "markets": top,
+        "summary": f"{len(rows)} active markets; top by {sort}: "
+                   + ", ".join(r["ticker"] for r in top[:5]),
+    }
 
 
 def market_detail(ticker: str) -> dict:
@@ -83,9 +98,11 @@ def market_detail(ticker: str) -> dict:
     (the raw API priceChange field is unreliable), OI, funding.
     Returns oraclePrice, openInterest, nextFundingRate_pct_1h (pct/hour),
     volume24h_USD, change24h_pct_from_candles (24h pct change, computed
-    from 25 x 1h candles), trades24h, and the latest three 1h candles
-    (t/open/close/usdVolume). An unknown or delisted ticker raises an
-    error (MCP isError) — settled markets are not served.
+    from 25 x 1h candles), trades24h, basis_pct (mark-vs-oracle deviation
+    in pct: (last candle close - oraclePrice) / oraclePrice x 100), and
+    the latest three 1h candles (t/open/close/usdVolume). An unknown or
+    delisted ticker raises an error (MCP isError) — settled markets are
+    not served.
     Example: market_detail(ticker="BTC-USD")"""
     _require_ticker(ticker)
     m = api.markets()[ticker]
@@ -95,6 +112,12 @@ def market_detail(ticker: str) -> dict:
         now, past = float(cnd[-1]["close"]), float(cnd[-25]["close"])
         if past:
             change24h = _fmt((now / past - 1) * 100, 3)
+    oracle = float(m.get("oraclePrice") or 0)
+    last_1m = api.candles(ticker, "1MIN", 1)
+    basis_pct = None
+    if last_1m and oracle:
+        basis_pct = _fmt(
+            (float(last_1m[-1]["close"]) - oracle) / oracle * 100, 3)
     return {
         "ticker": ticker,
         "oraclePrice": _fmt(m.get("oraclePrice")),
@@ -102,6 +125,7 @@ def market_detail(ticker: str) -> dict:
         "nextFundingRate_pct_1h": _fmt(float(m.get("nextFundingRate", 0) or 0) * 100, 5),
         "volume24h_USD": _fmt(float(m.get("volume24H", 0) or 0), 0),
         "change24h_pct_from_candles": change24h,
+        "basis_pct": basis_pct,
         "trades24h": m.get("trades24H"),
         "candles_1h_latest": [
             {"t": c.get("startedAt"), "open": _fmt(c.get("open")),
@@ -110,8 +134,12 @@ def market_detail(ticker: str) -> dict:
     }
 
 
-def candles(ticker: str, resolution: str = "1HOUR", limit: int = 100) -> list:
-    _require_ticker(ticker)
+def candles(
+    ticker: str,
+    resolution: Literal["1MIN", "5MIN", "15MIN", "30MIN",
+                        "1HOUR", "4HOURS", "1DAY"] = "1HOUR",
+    limit: int = 100,
+) -> list:
     """OHLCV candles with open interest for a market.
     resolution: 1MIN|5MIN|15MIN|30MIN|1HOUR|4HOURS|1DAY.
     Each candle: startedAt, open/high/low/close (price), baseTokenVolume
@@ -119,14 +147,15 @@ def candles(ticker: str, resolution: str = "1HOUR", limit: int = 100) -> list:
     ordered oldest -> newest (the
     indexer sends newest-first; we normalize). limit is capped at 1000.
     Example: candles(ticker="ETH-USD", resolution="1HOUR", limit=100)"""
+    _require_ticker(ticker)
     return api.candles(ticker, resolution, min(limit, 1000))
 
 
 def recent_trades(ticker: str, limit: int = 30) -> list:
-    _require_ticker(ticker)
     """Latest public trades of a market (price, side, size, type, time).
     Newest first; limit capped at 100. side is BUY/SELL, size in base coin.
     Example: recent_trades(ticker="BTC-USD", limit=30)"""
+    _require_ticker(ticker)
     return api.market_trades(ticker, min(limit, 100))
 
 
@@ -196,15 +225,18 @@ def registry_stats() -> dict:
     return registry.stats()
 
 
-def list_traders(limit: int = 10, max_hits: int = 100) -> list[dict]:
+def list_traders(limit: int = 10, max_hits: int = 100,
+                 offset: int = 0) -> dict:
     """Recently active trader addresses from the block-scanner registry
     (high-frequency validator committers filtered out by max_hits).
     Each row: address, hits (chain appearances), first_seen / last_seen,
-    last_height. Returns [] when the registry is not built on this host.
+    last_height. Returns {"total", "count", "offset", "has_more",
+    "next_offset", "traders"}; traders == [] when the registry is not
+    built on this host. Page with offset when has_more is true.
     Feed an address into trader_profile / trader_pnl_stats next.
     Example: list_traders(limit=10, max_hits=100)"""
     from . import registry
-    return registry.recent(limit, max_hits)
+    return registry.recent(limit, max_hits, max(offset, 0))
 
 
 def discover_traders(limit: int = 5, min_equity: float = 100.0) -> list[dict]:
@@ -217,7 +249,12 @@ def discover_traders(limit: int = 5, min_equity: float = 100.0) -> list[dict]:
     return registry.discover(limit, min_equity)
 
 
-def leaderboard(limit: int = 20, metric: str = "pnl_window") -> dict:
+def leaderboard(
+    limit: int = 20,
+    metric: Literal["pnl_window", "pnl_total", "equity",
+                    "day_winrate"] = "pnl_window",
+    offset: int = 0,
+) -> dict:
     """Verified trader leaderboard from our registry + PnL engine
     (batch-computed). metric: pnl_window | pnl_total | equity | day_winrate.
     Farmer flags mark likely rewards-farming bots (heuristic v0).
@@ -227,18 +264,24 @@ def leaderboard(limit: int = 20, metric: str = "pnl_window") -> dict:
     returns {"error": "no leaderboard run yet — run leaderboard.py first"}.
     Example: leaderboard(limit=20, metric="pnl_window")"""
     from . import analytics
-    return analytics.leaderboard(limit, metric)
+    return analytics.leaderboard(limit, metric, max(offset, 0))
 
 
-def latest_events(limit: int = 20, kind: str | None = None) -> list[dict]:
+def latest_events(
+    limit: int = 20,
+    kind: Literal["funding_extreme", "oi_spike_no_price",
+                  "equity_jump", "liq_cascade_signature"] | None = None,
+    offset: int = 0,
+) -> list[dict]:
     """Latest anomaly events from our detectors: funding_extreme,
     oi_spike_no_price, equity_jump, liq_cascade_signature. Each row: ts,
     kind, subject (ticker or address) and payload (dict of detector
-    numbers). Optional kind filter; subscribe via webhooks/Telegram
-    (alerts).
+    numbers). Optional kind filter; offset pages past the newest slice
+    (events are pruned at 5000 — offset+limit beyond that returns []).
+    Subscribe via webhooks/Telegram (alerts).
     Example: latest_events(limit=20, kind="funding_extreme")"""
     from . import analytics
-    return analytics.latest_events(limit, kind)
+    return analytics.latest_events(limit, kind, max(offset, 0))
 
 
 def market_digest() -> dict:
@@ -295,15 +338,19 @@ def height() -> dict:
 
 # ------------------------------------------- analytics toolkit ("best of" ideas)
 
-def funding_heatmap(limit: int = 15, min_oi_usd: float = 10_000.0) -> dict:
+def funding_heatmap(limit: int = 15, min_oi_usd: float = 10_000.0,
+                    offset: int = 0) -> dict:
     """All markets ranked by |next funding rate| (1h, annualized). Shows which
     sides pay: positive = longs pay shorts. Rows carry OI so agents can
     ignore micro-markets; raise min_oi_usd to filter noise.
     Each row: ticker, funding_pct_1h (pct per hour), funding_pct_annualized
     (1h rate x 24 x 365), oi_usd, oraclePrice, and exactly one of
     longs_pay / shorts_pay = True. Zero-rate markets and markets below
-    min_oi_usd are skipped. Returns {"count_nonzero", "top", "summary"}.
+    min_oi_usd are skipped. Returns {"count_nonzero", "top", "summary",
+    "offset", "has_more"} — page with offset when has_more is true.
     Example: funding_heatmap(limit=15, min_oi_usd=100000.0)"""
+    if offset < 0:
+        offset = 0
     ms = api.markets()
     rows = []
     for t, m in ms.items():
@@ -322,11 +369,12 @@ def funding_heatmap(limit: int = 15, min_oi_usd: float = 10_000.0) -> dict:
             "oraclePrice": _fmt(m.get("oraclePrice")),
         })
     rows.sort(key=lambda r: -abs(r["funding_pct_1h"]))
-    top = rows[:limit]
+    top = rows[offset:offset + limit]
     side = ", ".join(f"{r['ticker']} {r['funding_pct_1h']:+}%/1h"
                      for r in top[:3])
     return {"count_nonzero": len(rows), "top": top,
-            "summary": f"most extreme funding: {side}"}
+            "summary": f"most extreme funding: {side}",
+            "offset": offset, "has_more": offset + limit < len(rows)}
 
 
 def _ema(xs, n):
@@ -367,15 +415,21 @@ def _atr(candles, n=14):
 
 
 def market_ta(ticker: str, resolution: str = "1HOUR") -> dict:
-    _require_ticker(ticker)
     """Technical snapshot computed from dYdX candles: RSI(14), EMA20/EMA50
-    trend, ATR(14) volatility, Bollinger(20,2) position. Pure local math —
-    no external TA library.
+    trend, ATR(14) volatility, Bollinger(20,2) position, MACD(12,26,9),
+    VWAP(20) and annualized realized vol. Pure local math — no external
+    TA library.
     Key fields: price, trend_ema20_50 ("up"/"down"), rsi14 (0-100) and
     rsi_zone (overbought >70 / oversold <30 / neutral), atr14 (absolute)
     and atr_pct_of_price (pct), bollinger_pctB (0 = lower band, 1 = upper
-    band). Needs >=55 candles; returns {"error": ...} for thin markets.
+    band), macd_line/signal_line/macd_hist (classic 12/26/9; hist > 0 =
+    bullish momentum), vwap_20 (volume-weighted average price over the
+    last 20 candles: typical price (H+L+C)/3 weighted by usdVolume) and
+    realized_vol_annualized_pct (population std of log returns x
+    sqrt(candles-per-year), scaled by resolution). Needs >=55 candles;
+    returns {"error": ...} for thin markets.
     Example: market_ta(ticker="BTC-USD", resolution="1HOUR")"""
+    _require_ticker(ticker)
     cnd = api.candles(ticker, resolution, 120)
     if len(cnd) < 55:
         return {"error": f"not enough candles for {ticker} {resolution}"}
@@ -393,13 +447,32 @@ def market_ta(ticker: str, resolution: str = "1HOUR") -> dict:
     zone = ("overbought" if rsi and rsi > 70 else
             "oversold" if rsi and rsi < 30 else "neutral")
     bb_s = f"{pct_b:.2f}" if pct_b is not None else "n/a"
+    macd = ta_ext.macd(closes)
+    try:
+        vwap = ta_ext.vwap(cnd[-20:])
+    except (KeyError, TypeError, ValueError):
+        vwap = None          # candle feed without volume fields
+    rvol = (ta_ext.realized_vol(closes[-168:],
+                                ta_ext.periods_per_year(resolution))
+            if len(closes) >= 2 else None)
+    macd_s = f"MACD hist {macd['hist']:+.4g}" if macd else "MACD n/a"
+    vwap_s = (f"VWAP20 {_fmt_price(vwap, 4):.6g}"
+              if vwap is not None else "VWAP n/a")
+    rvol_s = f"rVol {rvol * 100:.1f}% ann" if rvol is not None else "rVol n/a"
     return {
         "ticker": ticker, "resolution": resolution, "price": _fmt_price(price),
         "trend_ema20_50": trend, "rsi14": _fmt(rsi, 1), "rsi_zone": zone,
         "atr14": _fmt_price(atr, 4), "atr_pct_of_price": _fmt(atr / price * 100, 2),
         "bollinger_pctB": _fmt(pct_b, 2),
+        "macd_line": macd["macd"] if macd else None,
+        "signal_line": macd["signal"] if macd else None,
+        "macd_hist": macd["hist"] if macd else None,
+        "vwap_20": _fmt_price(vwap, 4) if vwap is not None else None,
+        "realized_vol_annualized_pct": _fmt(rvol * 100, 2)
+        if rvol is not None else None,
         "summary": (f"{ticker}: {trend} trend, RSI {rsi:.0f} ({zone}), "
-                    f"ATR {atr / price * 100:.2f}% of price, BB%B {bb_s}"),
+                    f"ATR {atr / price * 100:.2f}% of price, BB%B {bb_s}, "
+                    f"{macd_s}, {vwap_s}, {rvol_s}"),
     }
 
 
@@ -414,8 +487,7 @@ def suggest_stops(ticker: str, side: str, entry: float | None = None,
     sit atr_mult_sl / atr_mult_tp x ATR(14) from entry (entry defaults to
     the current oracle price); breakeven_after is the price at +1 ATR in
     profit (then move SL to entry and trail by 1 ATR); risk_reward =
-    TP distance / SL distance. Returns {"error": ...} when no ATR is
-    available.
+    TP distance / SL distance.
     Example: suggest_stops(ticker="BTC-USD", side="LONG", atr_mult_sl=1.5)"""
     _require_ticker(ticker)
     m = api.markets().get(ticker, {})
@@ -472,6 +544,135 @@ def fills_review(address: str, subaccount: int = 0, limit: int = 100) -> dict:
     }
 
 
+def historical_funding(ticker: str, limit: int = 168) -> dict:
+    """Raw 1h funding rate history of a market (as realized, not the
+    next-rate preview in market_detail): each point is the rate actually
+    paid that hour; annualized_pct = rate x 24 x 365 for scale. Default
+    168 points = 7 days. Points are ordered oldest -> newest (candles
+    convention); limit capped at 500.
+    Positive = longs paid shorts. An unknown or delisted ticker raises an
+    error (MCP isError) — call list_markets for the valid set (format:
+    'ETH-USD').
+    Example: historical_funding(ticker="ETH-USD", limit=168)"""
+    _require_ticker(ticker)
+    hist = api.historical_funding(ticker, min(limit, 500))
+    points = [{"t": p.get("effectiveAt"),
+               "rate_1h": _fmt(float(p.get("rate", 0) or 0), 8),
+               "annualized_pct": _fmt(
+                   float(p.get("rate", 0) or 0) * 100 * 24 * 365, 2)}
+              for p in reversed(hist)]          # newest-first -> oldest-first
+    summary = "no funding history"
+    if points:
+        last = points[-1]
+        rates = [p["rate_1h"] for p in points]
+        summary = (f"latest 1h rate {last['rate_1h']:+} "
+                   f"({last['annualized_pct']:+}% ann), mean {sum(rates) / len(rates):+.8f}, "
+                   f"max |rate| {max(rates, key=abs):+.8f}, {len(points)} points")
+    return {"ticker": ticker, "points": points, "summary": summary}
+
+
+def raw_fills(address: str, subaccount: int = 0, limit: int = 200) -> dict:
+    """Raw execution tape for a subaccount — every field the indexer
+    gives, unchanged — for agents doing their own execution-quality
+    math (the aggregated view lives in fills_review). Each fill: t
+    (createdAt), market, side, liquidity (MAKER/TAKER), type, price,
+    size (base coin), usd_notional (price x size), fee, and the
+    position context (positionSideBefore / positionSizeBefore /
+    entryPriceBefore). Newest first; limit capped at 1000. Addresses
+    come from discover_traders / leaderboard / list_traders.
+    Example: raw_fills(address="dydx1m9hg73dtn5ku8ulmj8rjmdqh0hk7uuhawc69cn")"""
+    fs = api.fills(address, subaccount, min(limit, 1000))
+    # printed fields must be self-consistent (A2 lesson): usd_notional is
+    # recomputable from the printed price x size; sub-cent prices keep
+    # 6 significant digits instead of rounding to 0.0
+    fills = [{"t": f.get("createdAt"), "market": f.get("market"),
+              "side": f.get("side"), "liquidity": f.get("liquidity"),
+              "type": f.get("type"), "price": _fmt_price(f.get("price")),
+              "size": _fmt(f.get("size"), 6),
+              "usd_notional": _fmt_price(
+                  float(f.get("price", 0) or 0)
+                  * float(f.get("size", 0) or 0), 2),
+              "fee": _fmt(f.get("fee")),
+              "positionSideBefore": f.get("positionSideBefore"),
+              "positionSizeBefore": _fmt(f.get("positionSizeBefore")),
+              "entryPriceBefore": _fmt_price(f.get("entryPriceBefore")),
+              }
+             for f in fs]
+    summary = "no fills"
+    if fills:
+        mkts = sorted({f["market"] for f in fills if f["market"]})
+        summary = (f"{len(fills)} fills, markets: "
+                   + ", ".join(mkts[:5]) + ("…" if len(mkts) > 5 else ""))
+    return {"address": address, "subaccount": subaccount, "fills": fills,
+            "summary": summary}
+
+
+def cvd(ticker: str, trades_limit: int = 500) -> dict:
+    """Cumulative Volume Delta from the latest public trades: running
+    sum of +size on BUY / -size on SELL, oldest -> newest within the
+    sample. Rising CVD = aggressive buying dominating. Volumes are in
+    the base coin. Returns cvd_final (net aggressive flow),
+    buy_volume / sell_volume, trade window bounds (t_first / t_last),
+    trades_sampled and cvd_series_last (the last 50 running values —
+    full series stays out of the response to keep it compact).
+    An unknown or delisted ticker raises an error (MCP isError) — call
+    list_markets for the valid set (format: 'ETH-USD').
+    Example: cvd(ticker="BTC-USD", trades_limit=500)"""
+    _require_ticker(ticker)
+    trades = api.market_trades(ticker, min(trades_limit, 1000))
+    if not trades:
+        return {"error": "no trades"}
+    c = ta_ext.cvd(trades)          # handles newest-first internally
+    oldest, newest = trades[-1], trades[0]
+    return {
+        "ticker": ticker, "trades_sampled": len(trades),
+        "t_first": oldest.get("createdAt"), "t_last": newest.get("createdAt"),
+        "buy_volume": c["buy_volume"], "sell_volume": c["sell_volume"],
+        "cvd_final": c["final"],
+        "cvd_series_last": c["series"][-50:],
+        "summary": (f"CVD {c['final']:+} over {len(trades)} trades "
+                    f"(buy {c['buy_volume']:,.6g} / sell "
+                    f"{c['sell_volume']:,.6g} base units)"),
+    }
+
+
+def correlation(ticker_a: str, ticker_b: str,
+                resolution: str = "1HOUR", limit: int = 168) -> dict:
+    """Pearson correlation of two markets' log returns over candles:
+    r in [-1, 1] plus beta(a|b) — the sensitivity of a to b (a moves
+    beta x b's move, both in log space). Candle series are JOINED by
+    startedAt (only candles with the same timestamp on both sides are
+    compared), so partially-overlapping histories pair correctly.
+    Both tickers are validated; call list_markets for the valid set
+    (format: 'ETH-USD'). Returns {"error": ...} when there is
+    insufficient or constant data.
+    Example: correlation(ticker_a="BTC-USD", ticker_b="ETH-USD")"""
+    _require_ticker(ticker_a)
+    _require_ticker(ticker_b)
+    want = min(limit, 1000)
+    ca = api.candles(ticker_a, resolution, want)
+    cb = api.candles(ticker_b, resolution, want)
+    by_ts = {c["startedAt"]: float(c["close"]) for c in cb}
+    joined = [(float(c["close"]), by_ts[c["startedAt"]])
+              for c in ca if c["startedAt"] in by_ts]
+    a = [p for p, _ in joined]
+    b = [q for _, q in joined]
+    n = len(joined)
+    res = ta_ext.pearson_log_returns(a, b)
+    if res is None:
+        return {"ticker_a": ticker_a, "ticker_b": ticker_b,
+                "resolution": resolution, "candles": n,
+                "error": "insufficient or constant data"}
+    return {
+        "ticker_a": ticker_a, "ticker_b": ticker_b,
+        "resolution": resolution, "candles": n,
+        "r": _fmt(res["r"], 3), "beta_a_over_b": _fmt(res["beta"], 3),
+        "summary": (f"r={_fmt(res['r'], 3)}, "
+                    f"beta(a|b)={_fmt(res['beta'], 3)} over {n} "
+                    f"{resolution} candles"),
+    }
+
+
 # ------------------------------------------------------- trading (removed)
 # v0.2.3: analytics-only by design — trading tools (place_order /
 # cancel_all / my_positions) were removed from the public gateway.
@@ -498,7 +699,7 @@ def build_server():
 
     mcp = FastMCP(
         "dydx-agent-gateway",
-        version="0.2.5",
+        version="0.3.0",
         instructions=(
             "Tickers come from list_markets (format 'ETH-USD'); trader addresses from discover_traders/leaderboard. Start with market_digest for a briefing (events + funding extremes "
             "+ leaderboard). To evaluate a trader: trader_profile then "
@@ -508,15 +709,26 @@ def build_server():
             "oi_usd — ignore markets below ~$100k OI as noise. suggest_stops "
             "gives an ATR-based risk plan. latest_events returns detector "
             "output (funding_extreme / oi_spike_no_price / "
-            "liq_cascade_signature / equity_jump)."),
+            "liq_cascade_signature / equity_jump). Deeper analytics: "
+            "historical_funding (realized 1h funding history), raw_fills "
+            "(raw execution tape), cvd (aggressive buy/sell flow), "
+            "correlation (r + beta between two markets); market_ta adds "
+            "MACD/VWAP/realized vol and trader_pnl_stats a sortino-like "
+            "downside ratio."),
     )
     mcp.add_middleware(UsageLogger())
 
     @mcp.custom_route("/health", methods=["GET"])
     async def health(request: Request) -> JSONResponse:
         return JSONResponse({"ok": True, "service": "dydx-agent-gateway"})
-    RO = {"readOnlyHint": True}                 # data tools: safe to auto-run
-    RO_IDEM = {"readOnlyHint": True, "idempotentHint": True}
+    # read-only by design; destructiveHint explicit False (spec default is
+    # true, which would mislabel this analytics-only gateway)
+    RO = {"readOnlyHint": True, "destructiveHint": False, "openWorldHint": True}
+    RO_IDEM = {"readOnlyHint": True, "destructiveHint": False,
+               "idempotentHint": True, "openWorldHint": True}
+    # sqlite-backed tools: no external-world interaction
+    RO_LOCAL = {"readOnlyHint": True, "destructiveHint": False,
+                "idempotentHint": True, "openWorldHint": False}
 
     mcp.tool(list_markets, annotations=RO)
     mcp.tool(market_detail, annotations=RO)
@@ -528,14 +740,18 @@ def build_server():
     mcp.tool(market_ta, annotations=RO)
     mcp.tool(suggest_stops, annotations=RO)
     mcp.tool(fills_review, annotations=RO)
+    mcp.tool(historical_funding, annotations=RO)
+    mcp.tool(raw_fills, annotations=RO)
+    mcp.tool(cvd, annotations=RO)
+    mcp.tool(correlation, annotations=RO)
     mcp.tool(trader_pnl_stats, annotations=RO)
-    mcp.tool(registry_stats, annotations=RO_IDEM)
+    mcp.tool(registry_stats, annotations=RO_LOCAL)
     mcp.tool(list_traders, annotations=RO)
     mcp.tool(discover_traders, annotations=RO)
     mcp.tool(leaderboard, annotations=RO)
-    mcp.tool(latest_events, annotations=RO_IDEM)
-    mcp.tool(market_digest, annotations=RO_IDEM)
-    mcp.tool(usage_stats, annotations=RO_IDEM)
+    mcp.tool(latest_events, annotations=RO_LOCAL)
+    mcp.tool(market_digest, annotations=RO_LOCAL)
+    mcp.tool(usage_stats, annotations=RO_LOCAL)
     return mcp
 
 

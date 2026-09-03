@@ -7,6 +7,7 @@ Residuals of this identity are the "phantom PnL" detector — the class of bug
 that made previous dYdX dashboards show multi-million-dollar fantasy profits.
 """
 from . import api
+from . import ta_ext
 
 # A3 (v0.2.5): max_drawdown_pct is peak-relative and misleads when the
 # deposit-adjusted curve's running peak at the worst drawdown is near zero
@@ -60,6 +61,9 @@ def compute(rows: list[dict]) -> dict:
     mean = sum(vals) / len(vals) if vals else 0.0
     var = sum((v - mean) ** 2 for v in vals) / len(vals) if vals else 0.0
     sharpe_like = mean / (var ** 0.5) if var > 0 else None
+    # v0.3.0: downside-only twin of sharpe_like (sortino convention from
+    # ta_ext — mean / downside_dev, zero risk-free); not in summary.
+    sortino_like = ta_ext.sortino_like(vals)
 
     # max drawdown on deposit-adjusted equity (equity - cumNetTransfers)
     peak, mdd = None, 0.0
@@ -85,6 +89,8 @@ def compute(rows: list[dict]) -> dict:
         "win_days": wins, "loss_days": losses,
         "avg_daily_pnl": round(mean, 2),
         "sharpe_like_daily": round(sharpe_like, 2) if sharpe_like else None,
+        # v0.3.0: 2dp like sharpe_like_daily (output symmetry)
+        "sortino_like_daily": round(sortino_like, 2) if sortino_like else None,
         "max_drawdown_pct": round(mdd * 100, 2),
         "max_drawdown_usd": round(dd_usd, 2),
         "dd_pct_unreliable": bool(

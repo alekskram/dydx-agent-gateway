@@ -66,7 +66,7 @@ def test_retry_exhaustion_raises(monkeypatch):
 
     monkeypatch.setattr(api.urllib.request, "urlopen", fake_urlopen)
     monkeypatch.setattr(api.time, "sleep", lambda s: None)
-    with pytest.raises(urllib.error.HTTPError):
+    with pytest.raises(ValueError, match="indexer 503.*after 3 attempts"):
         api.get("test")
 
 
@@ -79,7 +79,7 @@ def test_no_retry_on_404(monkeypatch):
                                      {}, io.BytesIO(b"{}"))
 
     monkeypatch.setattr(api.urllib.request, "urlopen", fake_urlopen)
-    with pytest.raises(urllib.error.HTTPError):
+    with pytest.raises(ValueError, match="indexer 404"):
         api.get("test")
     assert calls["n"] == 1  # immediate raise, no retries
 

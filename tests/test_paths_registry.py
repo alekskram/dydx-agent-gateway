@@ -47,4 +47,5 @@ def test_registry_graceful_without_db(monkeypatch, tmp_path):
     monkeypatch.setattr(registry, "DB", tmp_path / "missing.sqlite")
     st = registry.stats()
     assert "not built on this host" in st.get("note", "")
-    assert registry.recent(5) == []
+    empty = registry.recent(5)
+    assert empty["traders"] == [] and empty["total"] == 0

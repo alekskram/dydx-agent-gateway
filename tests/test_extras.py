@@ -24,7 +24,8 @@ def _seed_registry():
 def test_registry_recent_filters_committers():
     _seed_registry()
     res = registry.recent(10, max_hits=100)
-    addrs = [r["address"] for r in res]
+    assert res["count"] == res["total"] and not res["has_more"]
+    addrs = [r["address"] for r in res["traders"]]
     assert "dydx1" + "b" * 38 not in addrs       # 500 hits = committer
     assert addrs[0] == "dydx1" + "c" * 38        # newest last_height first
     st = registry.stats()

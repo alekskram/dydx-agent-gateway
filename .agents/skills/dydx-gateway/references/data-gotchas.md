@@ -30,4 +30,4 @@ clients lie (each caught on live data and covered by gateway tests):
 Plus: **extreme funding on markets with OI < $100k is noise**
 (example: CRO "+2967% annualized" at $4.5k OI). Always filter by OI.
 
-Current version: reports/data-quality-YYYY-MM.md in the gateway repo.
+Current version: reports/data-quality-2026-08.md in the gateway repo.

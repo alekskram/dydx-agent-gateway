@@ -82,14 +82,18 @@ def prune_events(keep: int = 5000) -> int:
         return n - keep if n > keep else 0
 
 
-def latest_events(limit: int = 20, kind: str | None = None) -> list[dict]:
+def latest_events(limit: int = 20, kind: str | None = None,
+                  offset: int = 0) -> list[dict]:
     with con() as c:
         if kind:
-            rows = c.execute("SELECT * FROM events WHERE kind=? ORDER BY id DESC LIMIT ?",
-                             (kind, limit)).fetchall()
+            rows = c.execute(
+                "SELECT * FROM events WHERE kind=? ORDER BY id DESC "
+                "LIMIT ? OFFSET ?",
+                (kind, limit, offset)).fetchall()
         else:
-            rows = c.execute("SELECT * FROM events ORDER BY id DESC LIMIT ?",
-                             (limit,)).fetchall()
+            rows = c.execute(
+                "SELECT * FROM events ORDER BY id DESC LIMIT ? OFFSET ?",
+                (limit, offset)).fetchall()
     out = []
     for r in rows:
         d = dict(r)
@@ -98,7 +102,8 @@ def latest_events(limit: int = 20, kind: str | None = None) -> list[dict]:
     return out
 
 
-def leaderboard(limit: int = 20, metric: str = "pnl_window") -> dict:
+def leaderboard(limit: int = 20, metric: str = "pnl_window",
+                  offset: int = 0) -> dict:
     with con() as c:
         run = c.execute("SELECT * FROM leaderboard_runs ORDER BY id DESC LIMIT 1").fetchone()
         if not run:
@@ -107,12 +112,19 @@ def leaderboard(limit: int = 20, metric: str = "pnl_window") -> dict:
                          (run["id"],)).fetchall()
     key = {"pnl_window": "pnl_window", "pnl_total": "pnl_total",
            "equity": "equity", "day_winrate": "day_winrate"}[metric]
-    rows = sorted(rows, key=lambda r: -(r[key] or 0))[:limit]
+    rows = sorted(rows, key=lambda r: -(r[key] or 0))
+    total = len(rows)
+    top = rows[offset:offset + limit]
+    has_more = offset + limit < total
     return {
         "run": dict(run),
         "metric": metric,
-        "top": [{**dict(r), "farmer_flag": bool(r["farmer_flag"])} for r in rows],
+        "count": len(top),
+        "offset": offset,
+        "has_more": has_more,
+        "next_offset": offset + limit if has_more else None,
+        "top": [{**dict(r), "farmer_flag": bool(r["farmer_flag"])} for r in top],
         "summary": (f"top by {metric}: " + ", ".join(
             (f"{r['address'][:10]}… ${r[key]:,.0f}" if r[key] is not None
-             else f"{r['address'][:10]}… n/a") for r in rows[:5])),
+             else f"{r['address'][:10]}… n/a") for r in top[:5])),
     }

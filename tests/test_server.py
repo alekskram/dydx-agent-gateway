@@ -1,5 +1,7 @@
 """B4: server tools — TA math vectors, heatmap OI filter, stops math,
 trader_profile on mocked newest-first data."""
+import pytest
+
 from dydx_mcp import server as srv
 
 
@@ -95,3 +97,21 @@ def test_trader_profile_newest_first_handling(monkeypatch):
     assert p["equity_now"] == 150 and p["totalPnl_now"] == 40
     assert p["totalPnl_delta_window"] == 40
     assert p["open_positions"][0]["market"] == "X-USD"
+
+
+# ---------------------------------------------------- canon polish (MEC-52)
+@pytest.mark.parametrize("fn,marker", [
+    (srv.candles, "OHLCV"),
+    (srv.recent_trades, "trades"),
+    (srv.market_ta, "RSI"),
+])
+def test_tool_docstrings_attached(fn, marker):
+    """Docstring must sit directly under def (a statement before it detaches
+    it and the tool ships without a description on the wire)."""
+    assert fn.__doc__ and marker in fn.__doc__
+
+
+def test_pagination_handles_present():
+    import inspect
+    assert "offset" in inspect.signature(srv.funding_heatmap).parameters
+    assert "offset" in inspect.signature(srv.latest_events).parameters

@@ -34,17 +34,28 @@ def stats() -> dict:
             "seen_last_24h": fresh, "db": str(DB)}
 
 
-def recent(limit: int = 10, max_hits: int = 100) -> list[dict]:
+def recent(limit: int = 10, max_hits: int = 100,
+           offset: int = 0) -> dict:
     """Recently active addresses, excluding high-frequency committers
-    (validators' order-commit blocks inflate hits)."""
+    (validators' order-commit blocks inflate hits). Paginated:
+    {"total", "count", "offset", "has_more", "next_offset", "traders"}."""
     if not DB.exists():
-        return []
+        return {"total": 0, "count": 0, "offset": offset,
+                "has_more": False, "next_offset": None, "traders": []}
     with _con() as con:
+        total = con.execute(
+            "SELECT COUNT(*) FROM addresses WHERE hits <= ?",
+            (max_hits,)).fetchone()[0]
         rows = con.execute(
             "SELECT address, hits, first_seen, last_seen, last_height "
-            "FROM addresses WHERE hits <= ? ORDER BY last_height DESC LIMIT ?",
-            (max_hits, limit)).fetchall()
-    return [dict(r) for r in rows]
+            "FROM addresses WHERE hits <= ? "
+            "ORDER BY last_height DESC LIMIT ? OFFSET ?",
+            (max_hits, limit, offset)).fetchall()
+    has_more = offset + limit < total
+    return {"total": total, "count": len(rows), "offset": offset,
+            "has_more": has_more,
+            "next_offset": offset + limit if has_more else None,
+            "traders": [dict(r) for r in rows]}
 
 
 def discover(limit: int = 5, min_equity: float = 100.0,
@@ -52,7 +63,7 @@ def discover(limit: int = 5, min_equity: float = 100.0,
     """Screener: take recent candidate addresses from the registry and probe
     the indexer for live equity; return funded ones (real active traders)."""
     from . import api
-    cands = recent(probe_max, max_hits)
+    cands = recent(probe_max, max_hits)["traders"]
     out = []
     for c in cands:
         try:

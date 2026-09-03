@@ -1,6 +1,6 @@
 [project]
 name = "dydx-agent-gateway"
-version = "0.2.5"
+version = "0.3.0"
 description = "MCP gateway for AI agents to dYdX v4: market data, funding heatmap, TA, verified trader analytics (deposit-adjusted PnL), leaderboards, anomaly & liquidation-cascade detectors. Analytics-only: no trading tools, no keys."
 readme = "README.md"
 requires-python = ">=3.11"
@@ -29,7 +29,7 @@ Issues = "https://github.com/alekskram/dydx-agent-gateway/issues"
 Changelog = "https://github.com/alekskram/dydx-agent-gateway/blob/master/CHANGELOG.md"
 
 [project.optional-dependencies]
-dev = ["pytest>=8", "pytest-cov>=5", "pip-audit"]
+dev = ["pytest>=8", "pytest-cov>=5", "pip-audit", "numpy>=1.26; python_version>='3.11'"]
 
 [project.scripts]
 dydx-agent-gateway = "dydx_mcp.server:main"

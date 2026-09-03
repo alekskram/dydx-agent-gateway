@@ -1,5 +1,31 @@
 # Changelog
 
+## v0.3.0 (2026-09-03) — analyst pack
+- 4 new tools: `historical_funding` (raw 1h funding-rate series with
+  annualized rate = rate*24*365, ticker-guard), `cvd` (cumulative volume
+  delta from the trades tape: buy/sell by side, current CVD + series over
+  the window), `correlation` (Pearson r over log-returns of two tickers'
+  candles + beta(a|b)), `raw_fills` (raw fills of a trader for own
+  execution analysis; addresses from discover_traders/leaderboard).
+- Enrichments: `market_ta` + MACD(12,26,9) + VWAP(20, typical price x
+  volume) + realized_vol (annualized at candle resolution); `market_detail`
+  + basis_pct (mark deviation from oracle); `trader_pnl_stats` +
+  sortino_like_daily (downside deviation) next to the sharpe-like metric.
+- Fix: api historical_funding used a non-working query path (404) —
+  switched to the path form /historicalFunding/{ticker}.
+- Fix (live QA): correlation aligned the two candle series by index
+  tail; candle feeds are trade-driven and can differ by a bar, which
+  shifted one series and collapsed r (BTC/ETH 1h: 0.853 -> 0.033).
+  Now joined on startedAt (inner join). raw_fills prints
+  self-consistent price/size/usd_notional (6 significant digits).
+- Tests: +29 invariant (ta_ext) and regression tests per tool (mocked,
+  incl. ticker-guard cases) + shift-bug regression; plus an independent
+  numpy reference cross-check on randomized data
+  (tests/test_ta_ext_reference.py, tol 1e-9; author ≠ ta_ext author —
+  owner requirement).
+- Version bump 0.2.5 -> 0.3.0 (pyproject, FastMCP server, server.json);
+  numpy added to dev extras (reference cross-check; runtime stays stdlib).
+
 ## v0.2.5 (2026-09-02) — logical-QA fixes (review/43, findings A1-A4)
 - A2 (bug, Medium): adaptive price precision in `suggest_stops` /
   `market_ta` via `_fmt_price` — at least 6 significant digits (never fewer
