@@ -36,6 +36,21 @@ def _fmt_price(x, step=2):
 
 # ---------------------------------------------------------------- public data
 
+
+def _require_ticker(ticker: str) -> None:
+    """Validate a ticker against the live markets list (60s-cached).
+
+    Raises ValueError (-> MCP isError) with an actionable message on
+    unknown, delisted or wrongly formatted tickers, pointing the caller
+    to list_markets for the valid set (format: ETH-USD)."""
+    if ticker in api.markets():
+        return
+    sample = ", ".join(sorted(api.markets())[:5])
+    raise ValueError(
+        f"unknown or delisted ticker {ticker!r} (format: 'ETH-USD'). "
+        f"Call list_markets for the full set; examples: {sample}")
+
+
 def list_markets(limit: int = 20, sort: str = "volume") -> dict:
     """All dYdX v4 perpetual markets: oracle price, 24h volume, open interest,
     next funding rate. Sorted by 24h USD volume by default (or 'oi').
@@ -72,12 +87,8 @@ def market_detail(ticker: str) -> dict:
     (t/open/close/usdVolume). An unknown or delisted ticker raises an
     error (MCP isError) — settled markets are not served.
     Example: market_detail(ticker="BTC-USD")"""
-    m = api.markets().get(ticker)
-    if not m:
-        # FINAL_SETTLEMENT markets are filtered by api.markets() — a missing
-        # ticker may still exist as a delisted market, say so honestly.
-        raise ValueError(f"unknown or delisted ticker {ticker} "
-                         "(settled markets are not served)")  # -> isError per MCP spec
+    _require_ticker(ticker)
+    m = api.markets()[ticker]
     cnd = api.candles(ticker, "1HOUR", 25)
     change24h = None
     if len(cnd) >= 25:
@@ -100,6 +111,7 @@ def market_detail(ticker: str) -> dict:
 
 
 def candles(ticker: str, resolution: str = "1HOUR", limit: int = 100) -> list:
+    _require_ticker(ticker)
     """OHLCV candles with open interest for a market.
     resolution: 1MIN|5MIN|15MIN|30MIN|1HOUR|4HOURS|1DAY.
     Each candle: startedAt, open/high/low/close (price), baseTokenVolume
@@ -111,6 +123,7 @@ def candles(ticker: str, resolution: str = "1HOUR", limit: int = 100) -> list:
 
 
 def recent_trades(ticker: str, limit: int = 30) -> list:
+    _require_ticker(ticker)
     """Latest public trades of a market (price, side, size, type, time).
     Newest first; limit capped at 100. side is BUY/SELL, size in base coin.
     Example: recent_trades(ticker="BTC-USD", limit=30)"""
@@ -354,6 +367,7 @@ def _atr(candles, n=14):
 
 
 def market_ta(ticker: str, resolution: str = "1HOUR") -> dict:
+    _require_ticker(ticker)
     """Technical snapshot computed from dYdX candles: RSI(14), EMA20/EMA50
     trend, ATR(14) volatility, Bollinger(20,2) position. Pure local math —
     no external TA library.
@@ -403,6 +417,7 @@ def suggest_stops(ticker: str, side: str, entry: float | None = None,
     TP distance / SL distance. Returns {"error": ...} when no ATR is
     available.
     Example: suggest_stops(ticker="BTC-USD", side="LONG", atr_mult_sl=1.5)"""
+    _require_ticker(ticker)
     m = api.markets().get(ticker, {})
     entry = float(entry or m.get("oraclePrice") or 0)
     if not entry:
@@ -485,7 +500,7 @@ def build_server():
         "dydx-agent-gateway",
         version="0.2.5",
         instructions=(
-            "Start with market_digest for a briefing (events + funding extremes "
+            "Tickers come from list_markets (format 'ETH-USD'); trader addresses from discover_traders/leaderboard. Start with market_digest for a briefing (events + funding extremes "
             "+ leaderboard). To evaluate a trader: trader_profile then "
             "trader_pnl_stats (limit up to 5000 = ~7 months of history). "
             "To find traders: discover_traders (funded, on-chain) or "

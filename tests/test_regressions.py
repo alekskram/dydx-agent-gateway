@@ -94,3 +94,20 @@ def test_api_markets_filters_final_settlement(monkeypatch):
     tickers = [r["ticker"] for r in heat["top"]]
     assert "DEAD-USD" not in tickers
     assert tickers == ["BTC-USD"]  # DEAD's 5%/1h must not rank first
+
+
+def test_ticker_guard_actionable_error(monkeypatch):
+    """Unknown/wrongly formatted tickers must produce an actionable error
+    (format hint + pointer to list_markets), not a raw HTTP 400."""
+    monkeypatch.setattr(api, "get", lambda p, params=None, retries=3: {"markets": {
+        "ETH-USD": {"status": "ACTIVE", "oraclePrice": "1", "volume24H": "1",
+                    "openInterest": "1", "nextFundingRate": "0"}}})
+    monkeypatch.setattr(api, "_MARKETS_CACHE", (-1e9, {}))
+    for bad in ("ETHUSD", "eth-usd", "NOPE-USD"):
+        try:
+            srv.candles(bad, "1HOUR", 2)
+            raise AssertionError(f"{bad} should have raised")
+        except ValueError as e:
+            assert "list_markets" in str(e) and "ETH-USD" in str(e), str(e)
+    assert srv.candles("ETH-USD", "1HOUR", 2) == [] or isinstance(
+        srv.candles("ETH-USD", "1HOUR", 2), list)
