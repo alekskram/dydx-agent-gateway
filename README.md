@@ -6,6 +6,21 @@
 
 One MCP server that gives any AI agent analytics access to dYdX v4: market data, funding analytics, verified trader PnL, leaderboards, anomaly detection. Read-only and keyless — the gateway holds no keys and cannot move funds.
 
+## Use cases
+
+- **Verify a trader before you copy them** — deposit-adjusted PnL, day winrate,
+  drawdown in USD, and phantom-PnL detection that flags unreliable equity curves
+- **Hunt funding and OI anomalies** — funding heatmap ranked by |rate| with OI
+  context, OI-spike-without-price detectors, liquidation-cascade alerts
+- **Find real smart money** — verified leaderboard from on-chain trader
+  discovery, farmer-bot flags so you don't copy a rewards farmer
+- **Check the book before entering** — one-call market digest: latest anomaly
+  events + funding extremes + leaderboard top
+- **Plan the exit while you plan the entry** — ATR-based stop/take-profit/
+  breakeven/trailing plan per side
+
+Full walkthroughs with real outputs: [examples/use-cases.md](examples/use-cases.md).
+
 ## Install
 
 **Claude Code:**
@@ -20,14 +35,19 @@ claude mcp add dydx -- uvx dydx-agent-gateway
   "args": ["dydx-agent-gateway"]}}}
 ```
 
-**Codex** (`~/.codex/config.toml`):
+<details>
+<summary><b>Codex</b> (~/.codex/config.toml)</summary>
+
 ```toml
 [mcp_servers.dydx]
 command = "uvx"
 args = ["dydx-agent-gateway"]
 ```
+</details>
 
-**ZCode** — register the MCP server and copy the agent skill (all copy-paste):
+<details>
+<summary><b>ZCode</b> — register the server and copy the agent skill (copy-paste)</summary>
+
 ```bash
 # 1) start the gateway (keep it running)
 uvx dydx-agent-gateway --http --port 8901 &
@@ -49,6 +69,7 @@ git clone -q --depth 1 https://github.com/alekskram/dydx-agent-gateway /tmp/dag
 cp -r /tmp/dag/.agents/skills/dydx-gateway ~/.zcode/skills/ && rm -rf /tmp/dag
 echo "ZCode setup done — restart your session and call any dydx tool"
 ```
+</details>
 
 **Plain Python:**
 ```bash
