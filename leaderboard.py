@@ -17,7 +17,7 @@ CANDIDATES = 40
 
 
 def run():
-    cands = registry.recent(CANDIDATES, max_hits=100)
+    cands = registry.recent(CANDIDATES, max_hits=100)["traders"]
     seen = []
     for x in cands:
         if x["address"] not in [s for s in seen]:

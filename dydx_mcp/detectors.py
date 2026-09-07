@@ -102,7 +102,7 @@ def equity_jumps(n_candidates: int = 25, min_equity: float = 500.0,
     event: a whale moved capital in or out."""
     from datetime import datetime, timezone
     from . import registry
-    cands = registry.recent(n_candidates, max_hits=100)
+    cands = registry.recent(n_candidates, max_hits=100)["traders"]
     con = analytics.con()
     ts = datetime.now(timezone.utc).isoformat(timespec="seconds")
     n = 0
