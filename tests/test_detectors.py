@@ -104,7 +104,9 @@ def test_equity_jump_threshold_and_recovery(monkeypatch):
     from dydx_mcp import registry
     A, B = "dydx1" + "a" * 38, "dydx1" + "b" * 38
     monkeypatch.setattr(registry, "recent",
-                        lambda n, max_hits=100: [{"address": A}, {"address": B}])
+                        lambda n, max_hits=100: {"total": 2, "count": 2, "offset": 0,
+                                                 "has_more": False, "next_offset": None,
+                                                 "traders": [{"address": A}, {"address": B}]})
     acct = {"subaccounts": [{"equity": "2000", "subaccountNumber": 0}]}
 
     def fake_account(addr):
