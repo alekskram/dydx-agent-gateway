@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.2 (2026-09-22) — audit pass
+
+Server version string drift fixed (reported 0.3.0 to MCP clients); usage_stats added to the README tool table.
+
+
 ## 0.3.1 (2026-09-09) — promotion pass
 
 README install funnel: claude mcp add one-liner, downloads/glama badges, raw-API comparison table, suite cross-links; mcp-name comment for the official MCP Registry; server.json bumped.

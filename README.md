@@ -99,6 +99,7 @@ Requires Python ≥ 3.11. Deps (`fastmcp`, `pycryptodome`, `ecdsa`) install auto
 | Discovery | `discover_traders`, `leaderboard`, `list_traders`, `registry_stats` |
 | Signals | `latest_events` (funding extremes, OI spikes, liquidation cascades, equity jumps) |
 | Briefing | `market_digest` — one call: events + funding + leaderboard top. **Start here.** |
+| Meta | `usage_stats` — tool-call counters (traction/uptime of your instance) |
 
 Real outputs of every tool: [`examples/tool-output.md`](examples/tool-output.md).
 

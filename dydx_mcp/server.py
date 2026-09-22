@@ -701,7 +701,7 @@ def build_server():
 
     mcp = FastMCP(
         "dydx-agent-gateway",
-        version="0.3.0",
+        version="0.3.2",
         instructions=(
             "Tickers come from list_markets (format 'ETH-USD'); trader addresses from discover_traders/leaderboard. Start with market_digest for a briefing (events + funding extremes "
             "+ leaderboard). To evaluate a trader: trader_profile then "
