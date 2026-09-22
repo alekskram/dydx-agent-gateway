@@ -1,5 +1,7 @@
 # dYdX Agent Gateway
 
+<!-- mcp-name: io.github.alekskram/dydx-agent-gateway -->
+
 [![tests](https://github.com/alekskram/dydx-agent-gateway/actions/workflows/tests.yml/badge.svg)](https://github.com/alekskram/dydx-agent-gateway/actions/workflows/tests.yml)
 [![PyPI](https://img.shields.io/pypi/v/dydx-agent-gateway.svg)](https://pypi.org/project/dydx-agent-gateway/)
 [![PyPI downloads](https://img.shields.io/pypi/dm/dydx-agent-gateway?label=downloads)](https://pypi.org/project/dydx-agent-gateway/)

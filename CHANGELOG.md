@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.1 (2026-09-09) — promotion pass
+
+README install funnel: claude mcp add one-liner, downloads/glama badges, raw-API comparison table, suite cross-links; mcp-name comment for the official MCP Registry; server.json bumped.
+
+
 ## v0.3.0 (2026-09-03) — analyst pack
 - 4 new tools: `historical_funding` (raw 1h funding-rate series with
   annualized rate = rate*24*365, ticker-guard), `cvd` (cumulative volume
