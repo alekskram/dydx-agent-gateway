@@ -1,6 +1,9 @@
 # dYdX Agent Gateway
 
 [![tests](https://github.com/alekskram/dydx-agent-gateway/actions/workflows/tests.yml/badge.svg)](https://github.com/alekskram/dydx-agent-gateway/actions/workflows/tests.yml)
+[![PyPI](https://img.shields.io/pypi/v/dydx-agent-gateway.svg)](https://pypi.org/project/dydx-agent-gateway/)
+[![PyPI downloads](https://img.shields.io/pypi/dm/dydx-agent-gateway?label=downloads)](https://pypi.org/project/dydx-agent-gateway/)
+[![MCP Catalog](https://img.shields.io/badge/MCP_Catalog-glama.ai-4f46e5)](https://glama.ai/mcp/servers/alekskram/dydx-agent-gateway)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue)](https://pypi.org)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
@@ -28,7 +31,7 @@ Full walkthroughs with real outputs: [examples/use-cases.md](examples/use-cases.
 claude mcp add dydx -- uvx dydx-agent-gateway
 ```
 
-**Cursor / any mcp.json:**
+**Claude Desktop / Cursor / any mcp.json:**
 ```json
 {"mcpServers": {"dydx": {
   "command": "uvx",
@@ -106,6 +109,20 @@ Real outputs of every tool: [`examples/tool-output.md`](examples/tool-output.md)
 - **Analyst pack.** Funding-rate history, CVD, cross-market correlation, raw fills for execution analysis; TA enrichments MACD/VWAP/realized vol; sortino-like downside risk.
 - **Data-quality discipline.** Five documented indexer API gotchas (`.agents/skills/dydx-gateway/references/data-gotchas.md`) that silently corrupt naive analytics. 129 tests, CI on 3.11/3.13.
 
+## Why a gateway and not the raw indexer API?
+
+You can point an agent at `indexer.dydx.trade` directly — and then rebuild, one by one, what this gateway already handles:
+
+| Raw indexer gives you | You would have to build |
+|---|---|
+| paginated endpoints (≤1000/req) | per-endpoint pagination logic |
+| a funding endpoint that intermittently returns EMPTY or rpc-times out | retry + cached-series fallback |
+| per-bucket (non-cumulative) netTransfers, newest-first PnL, an unreliable `priceChange24H` field | reconciliation math — this gateway verifies the identity `equity-Δ = Δpnl + ΣnetTransfers` per account (phantom-PnL detection) |
+| raw candles and trades | anomaly detectors (funding extremes, OI spikes without price, liquidation-cascade signature), a TA pack (RSI/MACD/ATR/Bollinger/VWAP), CVD, cross-market correlation, ATR-based stop plans |
+| address strings in blocks | a validated bech32 trader registry with farmer-bot flags and verified leaderboard |
+
+The five documented indexer gotchas: `.agents/skills/dydx-gateway/references/data-gotchas.md`.
+
 ## Data notes
 
 Indicators are computed over the current candle window and change with every new bar. `nextFundingRate` is the exchange's live preview and is recomputed continuously; `volume24H` is a rolling window. Two calls moments apart legitimately differ.
@@ -121,6 +138,19 @@ All tools are read-only and keyless. The gateway signs nothing and holds no cred
 - **Rate limits?** Public endpoints, no auth; a 60s markets cache keeps you polite.
 - **How do I verify a trader before copying them?** `trader_profile` → `trader_pnl_stats` → `fills_review` — check the identity residual and maker/taker mix first.
 
+
+## Part of the suite
+
+Four sibling read-only MCP gateways, one style — keyless, cached, honest degradation:
+
+| Gateway | Focus |
+|---|---|
+| **dydx-agent-gateway** (you are here) | dYdX v4: verified trader PnL, funding/OI anomaly detectors, leaderboard |
+| [arcus-agent-gateway](https://github.com/alekskram/arcus-agent-gateway) | 194 tokenized US equities on Robinhood Chain: quotes, holders, whale transfers |
+| [hyperliquid-agent-gateway](https://github.com/alekskram/hyperliquid-agent-gateway) | Hyperliquid: 233 perps + spot, funding carry, account risk, HyperEVM |
+| [aster-agent-gateway](https://github.com/alekskram/aster-agent-gateway) | Aster DEX: ~580 futures incl. 24/7 TradFi perps, funding caps/floors |
+
+All four are on [glama.ai](https://glama.ai/mcp/servers/alekskram/dydx-agent-gateway) and PyPI — install any of them with `uvx <name>`.
 
 ## License
 
