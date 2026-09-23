@@ -9,20 +9,15 @@
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue)](https://pypi.org)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
-One MCP server that gives any AI agent analytics access to dYdX v4: market data, funding analytics, verified trader PnL, leaderboards, anomaly detection. Read-only and keyless — the gateway holds no keys and cannot move funds.
+One MCP server, 22 read-only tools, and your agent suddenly reads dYdX v4 the way a desk analyst does: live funding, trader PnL it can actually trust, anomaly detectors, leaderboards. No API keys anywhere. The gateway signs nothing, stores nothing, and cannot move funds even if it wanted to.
 
 ## Use cases
 
-- **Verify a trader before you copy them** — deposit-adjusted PnL, day winrate,
-  drawdown in USD, and phantom-PnL detection that flags unreliable equity curves
-- **Hunt funding and OI anomalies** — funding heatmap ranked by |rate| with OI
-  context, OI-spike-without-price detectors, liquidation-cascade alerts
-- **Find real smart money** — verified leaderboard from on-chain trader
-  discovery, farmer-bot flags so you don't copy a rewards farmer
-- **Check the book before entering** — one-call market digest: latest anomaly
-  events + funding extremes + leaderboard top
-- **Plan the exit while you plan the entry** — ATR-based stop/take-profit/
-  breakeven/trailing plan per side
+Copy-trading is where this pays off first. Before you follow anyone, `trader_pnl_stats` reconciles their equity curve against deposits and transfers; the residual tells you if the numbers are real. We built it after watching a "top trader of the week" who turned out to be down $1,271 all-time with a 77% drawdown.
+
+Funding analytics: a heatmap ranked by |rate| with OI context on every row, realized 1h funding history, and detectors for the patterns that precede pain, like OI spiking while price goes flat, or the |Δprice|↑ + OI↓ cascade signature.
+
+Discovery is on-chain, not scraped: block-scanned trader registry, funded-accounts probe, farmer-bot flags so you copy a trader and not a rewards farmer. One `market_digest` call gives you the day's events, funding extremes and the leaderboard top in a single response. When you're ready to enter, `suggest_stops` returns an ATR-based stop, take-profit, breakeven trigger and trailing level for your side.
 
 Full walkthroughs with real outputs: [examples/use-cases.md](examples/use-cases.md).
 
@@ -51,7 +46,7 @@ args = ["dydx-agent-gateway"]
 </details>
 
 <details>
-<summary><b>ZCode</b> — register the server and copy the agent skill (copy-paste)</summary>
+<summary><b>ZCode</b>: register the server and copy the agent skill</summary>
 
 ```bash
 # 1) start the gateway (keep it running)
@@ -72,7 +67,7 @@ PY
 # 3) copy the agent skill (tool guide + data gotchas)
 git clone -q --depth 1 https://github.com/alekskram/dydx-agent-gateway /tmp/dag
 cp -r /tmp/dag/.agents/skills/dydx-gateway ~/.zcode/skills/ && rm -rf /tmp/dag
-echo "ZCode setup done — restart your session and call any dydx tool"
+echo "ZCode setup done, restart your session and call any dydx tool"
 ```
 </details>
 
@@ -98,53 +93,56 @@ Requires Python ≥ 3.11. Deps (`fastmcp`, `pycryptodome`, `ecdsa`) install auto
 | Traders | `trader_profile`, `trader_pnl_stats`, `fills_review`, `raw_fills` |
 | Discovery | `discover_traders`, `leaderboard`, `list_traders`, `registry_stats` |
 | Signals | `latest_events` (funding extremes, OI spikes, liquidation cascades, equity jumps) |
-| Briefing | `market_digest` — one call: events + funding + leaderboard top. **Start here.** |
-| Meta | `usage_stats` — tool-call counters (traction/uptime of your instance) |
+| Briefing | `market_digest`: one call with events + funding + leaderboard top. **Start here.** |
+| Meta | `usage_stats`: tool-call counters (traction/uptime of your instance) |
 
 Real outputs of every tool: [`examples/tool-output.md`](examples/tool-output.md).
 
-**Solving real trader problems** — 5 scenarios with live data: [`examples/use-cases.md`](examples/use-cases.md).
+**Solving real trader problems**, five scenarios with live data: [`examples/use-cases.md`](examples/use-cases.md).
 
 ## What makes it different
 
-- **Verified trader PnL.** `trader_pnl_stats` reconciles the identity `equity-Δ = Δpnl + ΣnetTransfers` on every account — residual ≠ 0 means the numbers lie. Live-checked on real accounts to $0.0000 (see `reports/qa-logic.md`). Deposit-adjusted maxDD, day-winrate, sharpe-like.
-- **Anomaly detectors, not dashboards.** Funding extremes, OI spikes without price, equity jumps, and a liquidation-cascade signature (|Δprice|↑ + OI↓) — the patterns that matter before they're charts. Live catches in `reports/`.
-- **Analyst pack.** Funding-rate history, CVD, cross-market correlation, raw fills for execution analysis; TA enrichments MACD/VWAP/realized vol; sortino-like downside risk.
-- **Data-quality discipline.** Five documented indexer API gotchas (`.agents/skills/dydx-gateway/references/data-gotchas.md`) that silently corrupt naive analytics. 129 tests, CI on 3.11/3.13.
+PnL you can audit. `trader_pnl_stats` reconciles the identity `equity-Δ = Δpnl + ΣnetTransfers` on every account; when the residual is not zero, the numbers lie, and the tool says so instead of averaging the lie away. We ran it against real accounts and the residual lands at $0.0000. Deposit-adjusted maxDD, day-winrate and a sharpe-like ratio come out of the same pass.
+
+Detectors instead of dashboards. Funding extremes, OI spikes without price, equity jumps, and the liquidation-cascade signature (|Δprice|↑ + OI↓). Live catches sit in `reports/`.
+
+The rest is analyst gear: realized funding history, CVD from the trades tape, cross-market correlation with beta, raw fills for execution review, MACD/VWAP/realized-vol enrichments, sortino-like downside risk.
+
+And a habit of writing down what bites. Five indexer gotchas that silently corrupt naive analytics are documented in `.agents/skills/dydx-gateway/references/data-gotchas.md`; 129 tests (now 133) run in CI on 3.11 and 3.13.
 
 ## Why a gateway and not the raw indexer API?
 
-You can point an agent at `indexer.dydx.trade` directly — and then rebuild, one by one, what this gateway already handles:
+Point an agent at `indexer.dydx.trade` directly and see how far it gets before the fun starts:
 
 | Raw indexer gives you | You would have to build |
 |---|---|
 | paginated endpoints (≤1000/req) | per-endpoint pagination logic |
 | a funding endpoint that intermittently returns EMPTY or rpc-times out | retry + cached-series fallback |
-| per-bucket (non-cumulative) netTransfers, newest-first PnL, an unreliable `priceChange24H` field | reconciliation math — this gateway verifies the identity `equity-Δ = Δpnl + ΣnetTransfers` per account (phantom-PnL detection) |
-| raw candles and trades | anomaly detectors (funding extremes, OI spikes without price, liquidation-cascade signature), a TA pack (RSI/MACD/ATR/Bollinger/VWAP), CVD, cross-market correlation, ATR-based stop plans |
-| address strings in blocks | a validated bech32 trader registry with farmer-bot flags and verified leaderboard |
+| per-bucket (non-cumulative) netTransfers, newest-first PnL, an unreliable `priceChange24H` field | reconciliation math; this gateway verifies `equity-Δ = Δpnl + ΣnetTransfers` per account (phantom-PnL detection) |
+| raw candles and trades | detectors (funding extremes, OI spikes, cascade signature), a TA pack (RSI/MACD/ATR/Bollinger/VWAP), CVD, correlation, ATR stop plans |
+| address strings in blocks | a validated bech32 trader registry with farmer-bot flags and a verified leaderboard |
 
 The five documented indexer gotchas: `.agents/skills/dydx-gateway/references/data-gotchas.md`.
 
 ## Data notes
 
-Indicators are computed over the current candle window and change with every new bar. `nextFundingRate` is the exchange's live preview and is recomputed continuously; `volume24H` is a rolling window. Two calls moments apart legitimately differ.
+Indicators are computed over the current candle window and move with every new bar. `nextFundingRate` is the exchange's live preview, recomputed continuously; `volume24H` rolls. Two calls a minute apart will legitimately differ, and that is not a bug.
 
 ## Safety model
 
-All tools are read-only and keyless. The gateway signs nothing and holds no credentials. An offline-tested EIP-712 signer remains in `dydx_mcp/signer.py` as a library for anyone building their own execution layer — it is wired to no MCP tool.
+Every tool is read-only and keyless. The gateway signs nothing and holds no credentials. An offline-tested EIP-712 signer stays in `dydx_mcp/signer.py` as a library for anyone building their own execution layer; it is wired to no MCP tool.
 
 ## FAQ
 
-- **Does it trade?** No. Analytics only, by design.
-- **API keys?** None. Everything runs on public indexer endpoints.
-- **Rate limits?** Public endpoints, no auth; a 60s markets cache keeps you polite.
-- **How do I verify a trader before copying them?** `trader_profile` → `trader_pnl_stats` → `fills_review` — check the identity residual and maker/taker mix first.
+- **Does it trade?** No, analytics only. That was the design brief.
+- **API keys?** None. Public indexer endpoints.
+- **Rate limits?** No auth; a 60s markets cache keeps the traffic polite.
+- **How do I vet a trader before copying?** `trader_profile`, then `trader_pnl_stats`, then `fills_review`. Check the identity residual and the maker/taker mix before anything else.
 
 
 ## Part of the suite
 
-Four sibling read-only MCP gateways, one style — keyless, cached, honest degradation:
+Four sibling read-only MCP gateways, one style: keyless, cached, honest degradation.
 
 | Gateway | Focus |
 |---|---|
@@ -153,7 +151,7 @@ Four sibling read-only MCP gateways, one style — keyless, cached, honest degra
 | [hyperliquid-agent-gateway](https://github.com/alekskram/hyperliquid-agent-gateway) | Hyperliquid: 233 perps + spot, funding carry, account risk, HyperEVM |
 | [aster-agent-gateway](https://github.com/alekskram/aster-agent-gateway) | Aster DEX: ~580 futures incl. 24/7 TradFi perps, funding caps/floors |
 
-All four are on [glama.ai](https://glama.ai/mcp/servers/alekskram/dydx-agent-gateway) and PyPI — install any of them with `uvx <name>`.
+All four are on [glama.ai](https://glama.ai/mcp/servers/alekskram/dydx-agent-gateway) and PyPI; any of them installs with `uvx <name>`.
 
 ## License
 

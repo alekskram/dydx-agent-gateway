@@ -1,10 +1,10 @@
 # Real Trading Problems Solved
 
-Five scenarios a trader faces daily — solved with single MCP calls.
+Five scenarios a trader hits daily. Each one closes with a single MCP call, and the outputs below are real captures.
 
 ## 1. "Is this trader on Twitter actually profitable?"
 
-**Pain:** Screenshots lie. Aggregators show stale data. You need verified numbers before copying.
+Screenshots lie and aggregators lag. Before copying anyone, pull the numbers yourself.
 
 ```
 → leaderboard(limit=5, metric="pnl_window")
@@ -16,11 +16,11 @@ Five scenarios a trader faces daily — solved with single MCP calls.
   farmer_flag marks reward-farming bots
 ```
 
-**Why it matters:** No other tool verifies PnL against the deposit-adjusted equity curve. If residual ≠ 0, the numbers lie.
+Plenty of tools show PnL. This one checks it against the deposit-adjusted equity curve, and a non-zero residual means the numbers are lying. That check is the whole reason it exists.
 
 ## 2. "Is the market calm or about to storm?"
 
-**Pain:** You want to enter, but a liquidation cascade could wipe you in minutes.
+You want to enter. A cascade could wipe you in the next ten minutes.
 
 ```
 → latest_events(limit=15)
@@ -33,11 +33,11 @@ Five scenarios a trader faces daily — solved with single MCP calls.
   VERDICT: 5 cascades — STORM. SHORTS being liquidated → squeeze up.
 ```
 
-**Why it matters:** The signature detector catches |Δprice|↑ + OI↓ patterns that precede cascades — before they hit your position.
+The signature detector reads |Δprice|↑ + OI↓, the shape cascades take before they become visible on charts.
 
 ## 3. "Where is smart money accumulating?"
 
-**Pain:** Big players build positions quietly. You want to see it before the move.
+Big players build quietly. Seeing it before the move is the entire game.
 
 ```
 → latest_events(kind="oi_spike_no_price")
@@ -50,11 +50,11 @@ Five scenarios a trader faces daily — solved with single MCP calls.
   Signal: someone added $2M+ in OI without moving the price.
 ```
 
-**Why it matters:** OI spikes without price movement = accumulation or distribution. Combined with funding direction, this reveals positioning before charts show it.
+OI up 11% on a flat price is someone absorbing supply. Add the funding direction and you know which side they are on while the chart still shows nothing.
 
 ## 4. "What's my portfolio risk if BTC drops 5%?"
 
-**Pain:** You hold alts, BTC sneezes. How much do you lose?
+You hold alts and BTC sneezes. What does it cost you?
 
 ```
 → correlation("ETH-USD", "BTC-USD", "1HOUR", 168)
@@ -68,11 +68,11 @@ Five scenarios a trader faces daily — solved with single MCP calls.
   Portfolio impact: ~-5.5% average. SOL is the riskiest holding.
 ```
 
-**Why it matters:** Beta and correlation from actual dYdX candle data — not generic estimates. One call per pair, instant result.
+Beta and r come from actual dYdX candles, not a generic estimate. One call per pair, and the answer is immediate.
 
 ## 5. "Where should I place my stop?"
 
-**Pain:** Stops too tight get hunted, too wide lose money. You need data-driven levels.
+Tight stops get hunted. Wide ones bleed you slowly. Levels should come from volatility, not vibes.
 
 ```
 → suggest_stops("SOL-USD", side="long")
@@ -84,7 +84,7 @@ Five scenarios a trader faces daily — solved with single MCP calls.
   Breakeven:  $105.4171  (after +1 ATR move)
 ```
 
-**Why it matters:** ATR-based stops adapt to current volatility. In calm markets, stops tighten. In storms, they widen. No more fixed percentages.
+The levels ride ATR(14), so they tighten in calm tape and widen in storms. Fixed percentages stop being your problem.
 
 ---
 
@@ -99,7 +99,7 @@ Five scenarios a trader faces daily — solved with single MCP calls.
   We verify it on every account, every time.
 ```
 
-This is the `market_digest` of trust — one number that proves the data isn't lying.
+One number, and you know whether the rest can be trusted.
 
 ---
 
@@ -109,7 +109,7 @@ Six scenarios for researchers, report writers, and on-chain investigators.
 
 ## A1. "I need a morning briefing in 5 minutes"
 
-**Pain:** Daily reports require 10 browser tabs, manual copy-paste, and stale screenshots.
+A daily report used to mean ten tabs and copy-paste archaeology.
 
 ```
 → market_digest()
@@ -127,7 +127,7 @@ One call → skeleton of your daily report. Every number is timestamped and sour
 
 ## A2. "Someone said 'funding on XMR is crazy'. Verify before publishing."
 
-**Pain:** Fact-checking claims requires pulling historical data from multiple sources.
+Fact-checking a claim like this normally means digging through archives.
 
 ```
 → historical_funding("XMR-USD", limit=48)
@@ -145,7 +145,7 @@ Every number traceable to the indexer API. No screenshots needed.
 
 ## A3. "Reconstruct what happened with SOL"
 
-**Pain:** For an event report, you need the timeline: price action, OI changes, and interpretation.
+An event report needs a timeline: what price did, what OI did, and what it means.
 
 ```
 → candles("SOL-USD", "1HOUR", 12)
@@ -160,11 +160,11 @@ Every number traceable to the indexer API. No screenshots needed.
   Positions were force-closed, not new longs entering.
 ```
 
-The OI-in-candles feature lets you distinguish genuine buying from forced liquidation — critical for accurate reporting.
+Because candles carry OI, you can tell genuine buying from forced liquidation. That difference decides whether your report is right.
 
 ## A4. "Compare two traders' execution styles"
 
-**Pain:** Understanding WHO is a real trader vs a bot requires execution data.
+Real trader or bot? The answer lives in the fills, not the PnL.
 
 ```
 → fills_review(address) for two top traders
@@ -176,11 +176,11 @@ The OI-in-candles feature lets you distinguish genuine buying from forced liquid
   Both: day_winrate 56% → similar hit rate
 ```
 
-Maker/taker split reveals execution strategy. Combined with PnL identity check, you can separate genuine alpha from wash trading.
+The maker/taker split exposes execution style; the identity check rules out phantom numbers. Together they separate alpha from wash trading.
 
 ## A5. "What's the market structure right now?"
 
-**Pain:** Regime detection requires cross-asset analysis that's manual and slow.
+Regime detection is cross-asset work, and doing it by hand takes an afternoon.
 
 ```
 → correlation + market_ta across assets
@@ -197,11 +197,11 @@ Maker/taker split reveals execution strategy. Combined with PnL identity check, 
   → TRENDING MARKET (up) — high correlations, cascades likely on reversal
 ```
 
-This is a market structure report in 20 seconds. High correlations + overbought RSI = elevated cascade risk.
+Twenty seconds for a full structure read. High correlations with an overbought RSI is exactly the combo that precedes cascades on reversal.
 
 ## A6. "Verify data quality before publishing"
 
-**Pain:** Your reputation depends on accuracy. One wrong number destroys credibility.
+One wrong number in a published report costs more than a week of being late.
 
 ```
 → trader_pnl_stats(address) for top 3 traders
@@ -215,7 +215,7 @@ This is a market structure report in 20 seconds. High correlations + overbought 
   Check: equity-Δ = Δpnl + ΣnetTransfers (on every account)
 ```
 
-**This is unique.** No other analytics tool verifies its own data against the fundamental accounting identity. If residual ≠ 0, the platform data is wrong — and now you know before your readers do.
+No other analytics tool we know verifies its own data against the accounting identity. A non-zero residual means the upstream numbers are wrong, and now you know it before your readers do.
 
 ---
 
