@@ -2,21 +2,38 @@
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.alekskram/dydx-agent-gateway",
   "title": "dYdX Agent Gateway",
-  "description": "Analytics-only MCP gateway to dYdX v4: market data, funding, trader PnL, anomalies. No keys.",
+  "description": "Analytics-only MCP gateway to dYdX v4: auditable trader PnL, funding and OI detectors. No keys.",
   "version": "0.3.2",
   "tools": [
-    {"name": "market_digest", "description": "One-call briefing: events, funding extremes, leaderboard top"},
-    {"name": "trader_pnl_stats", "description": "Deposit-adjusted PnL, day-winrate, maxDD, data-accuracy residual"},
-    {"name": "historical_funding", "description": "Realized 1h funding-rate history with annualized rates"},
-    {"name": "cvd", "description": "Cumulative volume delta: aggressive buy/sell flow from the trades tape"},
-    {"name": "correlation", "description": "Pearson r + beta between two markets over log returns"}
+    {
+      "name": "market_digest",
+      "description": "One-call briefing: events, funding extremes, leaderboard top"
+    },
+    {
+      "name": "trader_pnl_stats",
+      "description": "Deposit-adjusted PnL, day-winrate, maxDD, data-accuracy residual"
+    },
+    {
+      "name": "historical_funding",
+      "description": "Realized 1h funding-rate history with annualized rates"
+    },
+    {
+      "name": "cvd",
+      "description": "Cumulative volume delta: aggressive buy/sell flow from the trades tape"
+    },
+    {
+      "name": "correlation",
+      "description": "Pearson r + beta between two markets over log returns"
+    }
   ],
   "packages": [
     {
       "registryType": "pypi",
       "identifier": "dydx-agent-gateway",
       "version": "0.3.2",
-      "transport": {"type": "stdio"}
+      "transport": {
+        "type": "stdio"
+      }
     }
   ],
   "repository": {
